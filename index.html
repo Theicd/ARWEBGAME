@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>משחק מציאות רבודה</title>
+    <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div style="position: absolute; top: 10px; right: 10px; background: rgba(255,255,255,0.8); padding: 10px; font-family: Arial, sans-serif; text-align: center; z-index: 1000;">
+        <p>יש להדפיס את ה-Hiro marker כדי לראות את המטבעות. קובץ ההסבר נמצא בתיקיית הפרויקט.</p>
+        <p>אם המכשיר תומך ב-WebXR, ניתן לזהות משטחים אוטומטית.</p>
+    </div>
+    <div id="joystick" style="position: absolute; bottom: 20px; left: 20px; width: 100px; height: 100px; background: rgba(0,0,0,0.5); border-radius: 50%; z-index: 1000; display: none;"></div>
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: true" xr-mode-ui="enabled: true">
+        <a-marker preset="hiro">
+            <a-entity position="0 0 0" scale="0.05 0.05 0.05" gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/assets/models/coin.gltf" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000"></a-entity>
+            <a-entity position="0.5 0 0.5" scale="0.05 0.05 0.05" gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/assets/models/coin.gltf" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000"></a-entity>
+            <a-entity position="-0.5 0 -0.5" scale="0.05 0.05 0.05" gltf-model="https://raw.githack.com/AR-js-org/AR.js/master/aframe/examples/image-tracking/assets/models/coin.gltf" animation="property: rotation; to: 0 360 0; loop: true; dur: 2000"></a-entity>
+        </a-marker>
+        <a-entity camera></a-entity>
+    </a-scene>
+    <script src="script.js"></script>
+</body>
+</html>
