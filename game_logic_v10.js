@@ -538,57 +538,14 @@ window.onload = function() {
     combatLoop();
     aiScanLoop();
 
-    // === WEBXR SPAWNING ===
-    const scene = document.querySelector('a-scene');
-    if(scene) {
-        scene.addEventListener('enter-vr', () => {
-            const reticle = document.getElementById('reticle-target');
-            if(scene.is('ar-mode') && reticle) {
-                reticle.setAttribute('visible', 'true');
-            }
-        });
-
-        // Tap to spawn enemy on surface
-        scene.addEventListener('click', () => {
-            const reticle = document.getElementById('reticle-target');
-            if(reticle && reticle.object3D && reticle.object3D.visible) {
-                const pos = reticle.getAttribute('position');
-                spawnEnemyAt(pos);
-                if(navigator.vibrate) navigator.vibrate(50);
-            } else {
-                // No surface - spawn in front
-                spawnEnemy();
-            }
-        });
-    }
-    
-    function spawnEnemyAt(pos) {
-        if(enemies.length >= MAX_ENEMIES) return;
-        
-        const scene = document.querySelector('a-scene');
-        if(!scene) return;
-        
-        const enemy = document.createElement('a-entity');
-        enemy.setAttribute('id', 'enemy-' + Date.now());
-        enemy.setAttribute('class', 'enemy-target');
-        enemy.setAttribute('position', `${pos.x} ${pos.y + 0.5} ${pos.z}`);
-        
-        enemy.innerHTML = `
-            <a-sphere radius="0.3" color="#333" metalness="0.8" roughness="0.2"></a-sphere>
-            <a-ring rotation="90 0 0" radius-inner="0.4" radius-outer="0.5" color="#ff0000" 
-                    animation="property: rotation; to: 90 360 0; dur: 2000; loop: true; easing: linear"></a-ring>
-            <a-cylinder height="0.05" radius="0.15" position="0 -0.2 0" color="#ff3300"
-                    animation="property: material.emissive; from: #ff0000; to: #330000; dur: 500; loop: true; dir: alternate"></a-cylinder>
-            <a-light type="point" color="#ff3300" intensity="0.5" distance="3"></a-light>
-        `;
-        
-        enemy.dataset.health = 100;
-        enemy.dataset.type = 'DRONE';
-        
-        scene.appendChild(enemy);
-        enemies.push(enemy);
-        animateEnemy(enemy);
-    }
+    // === TAP TO SPAWN ENEMY ===
+    document.addEventListener('click', () => {
+        // Spawn enemy on tap (if less than max)
+        if(enemies.length < MAX_ENEMIES) {
+            createEnemyOverlay();
+            if(navigator.vibrate) navigator.vibrate(30);
+        }
+    });
 
     // === CAMERA KICKER ===
     function kickCamera() {

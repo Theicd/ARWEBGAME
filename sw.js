@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-ar-v74-ai-scan';
+const CACHE_NAME = 'iron-ar-v77-video-fix';
 const urlsToCache = [
   './',
   './index.html',
