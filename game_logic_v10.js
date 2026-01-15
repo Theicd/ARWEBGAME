@@ -234,72 +234,53 @@ window.onload = function() {
     }
     initAudio();
 
-    // === 2D ENEMY OVERLAY (Screen-space enemies that don't move with camera) ===
-    // These are HTML overlays, not 3D objects - they stay fixed on screen
+    // === FIXED SCREEN ENEMIES ===
+    // Enemies are FIXED on the screen - they DON'T move with camera
+    // Player must physically move the phone to aim the crosshair at them
     
     function createEnemyOverlay() {
         if(enemies.length >= MAX_ENEMIES) return;
         
-        const hud = document.getElementById('hud');
-        if(!hud) return;
+        // Use body, not HUD - completely separate from camera
+        const container = document.body;
         
-        // Random screen position (not center - that's where reticle is)
+        // Fixed position on screen (NOT center - that's where reticle is)
         const side = Math.random() > 0.5 ? 'left' : 'right';
-        const x = side === 'left' ? (10 + Math.random() * 25) : (65 + Math.random() * 25);
-        const y = 20 + Math.random() * 50;
+        const xPos = side === 'left' ? (5 + Math.random() * 30) : (65 + Math.random() * 30);
+        const yPos = 15 + Math.random() * 55;
         
         const enemy = document.createElement('div');
         enemy.className = 'enemy-overlay';
         enemy.id = 'enemy-' + Date.now();
-        enemy.style.left = x + '%';
-        enemy.style.top = y + '%';
+        enemy.style.cssText = `
+            position: fixed !important;
+            left: ${xPos}% !important;
+            top: ${yPos}% !important;
+            transform: translate(-50%, -50%);
+            z-index: 50 !important;
+            pointer-events: none;
+        `;
         enemy.innerHTML = `
             <div class="enemy-marker">
                 <div class="enemy-ring"></div>
                 <div class="enemy-core">◆</div>
             </div>
-            <div class="enemy-label">DRONE</div>
+            <div class="enemy-label">DRONE ${(2 + Math.random() * 4).toFixed(1)}m</div>
         `;
         
         enemy.dataset.health = 100;
         enemy.dataset.type = 'DRONE';
         enemy.dataset.distance = (2 + Math.random() * 5).toFixed(1);
         
-        hud.appendChild(enemy);
+        container.appendChild(enemy);
         enemies.push(enemy);
         
-        // Move enemy slowly
-        animateEnemyOverlay(enemy);
-        
-        console.log('Enemy overlay spawned:', enemy.id);
-    }
-    
-    function animateEnemyOverlay(enemy) {
-        if(!enemy.parentNode) return;
-        
-        // Slow random movement on screen
-        const currentLeft = parseFloat(enemy.style.left);
-        const currentTop = parseFloat(enemy.style.top);
-        
-        let newLeft = currentLeft + (Math.random() - 0.5) * 10;
-        let newTop = currentTop + (Math.random() - 0.5) * 10;
-        
-        // Keep within bounds
-        newLeft = Math.max(5, Math.min(90, newLeft));
-        newTop = Math.max(15, Math.min(75, newTop));
-        
-        enemy.style.transition = 'left 2s ease, top 2s ease';
-        enemy.style.left = newLeft + '%';
-        enemy.style.top = newTop + '%';
-        
-        setTimeout(() => {
-            if(enemy.parentNode) animateEnemyOverlay(enemy);
-        }, 3000);
+        console.log('Enemy FIXED at screen position:', xPos.toFixed(0) + '%', yPos.toFixed(0) + '%');
     }
     
     // Spawn enemies periodically
     setInterval(createEnemyOverlay, ENEMY_SPAWN_INTERVAL);
-    setTimeout(createEnemyOverlay, 3000); // First enemy after 3 sec
+    setTimeout(createEnemyOverlay, 2000); // First enemy after 2 sec
 
     // === COMBAT SYSTEM - LOCK & FIRE ===
     function checkEnemyLock() {
