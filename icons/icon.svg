@@ -1,23 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0a0a1a"/>
-      <stop offset="100%" style="stop-color:#1a1a2e"/>
+      <stop offset="0%" style="stop-color:#1a0000"/>
+      <stop offset="100%" style="stop-color:#000000"/>
     </linearGradient>
     <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#00d4ff"/>
-      <stop offset="100%" style="stop-color:#0088cc"/>
+      <stop offset="0%" style="stop-color:#00ffff"/>
+      <stop offset="100%" style="stop-color:#0066ff"/>
     </linearGradient>
+    <filter id="blur">
+      <feGaussianBlur stdDeviation="3"/>
+    </filter>
   </defs>
+  <!-- Background -->
   <rect width="512" height="512" rx="100" fill="url(#bg)"/>
-  <circle cx="256" cy="256" r="180" fill="none" stroke="url(#glow)" stroke-width="8" opacity="0.3"/>
-  <circle cx="256" cy="256" r="140" fill="none" stroke="url(#glow)" stroke-width="4" opacity="0.5"/>
-  <circle cx="256" cy="256" r="100" fill="none" stroke="#00d4ff" stroke-width="6"/>
-  <circle cx="256" cy="256" r="60" fill="none" stroke="#00d4ff" stroke-width="3"/>
-  <line x1="256" y1="180" x2="256" y2="140" stroke="#00d4ff" stroke-width="4"/>
-  <line x1="256" y1="332" x2="256" y2="372" stroke="#00d4ff" stroke-width="4"/>
-  <line x1="180" y1="256" x2="140" y2="256" stroke="#00d4ff" stroke-width="4"/>
-  <line x1="332" y1="256" x2="372" y2="256" stroke="#00d4ff" stroke-width="4"/>
+  <!-- Glow effect -->
+  <circle cx="256" cy="256" r="140" fill="#00ffff" opacity="0.15" filter="url(#blur)"/>
+  <!-- Outer ring -->
+  <circle cx="256" cy="256" r="160" fill="none" stroke="#00ffff" stroke-width="6" opacity="0.6"/>
+  <!-- Middle ring -->
+  <circle cx="256" cy="256" r="120" fill="none" stroke="#00ffff" stroke-width="8"/>
+  <!-- Inner ring -->
+  <circle cx="256" cy="256" r="80" fill="none" stroke="#00ffff" stroke-width="4" opacity="0.8"/>
+  <!-- Arc reactor core -->
+  <circle cx="256" cy="256" r="50" fill="#00d4ff"/>
+  <circle cx="256" cy="256" r="35" fill="#ffffff"/>
+  <circle cx="256" cy="256" r="15" fill="#00ffff"/>
+  <!-- Crosshairs -->
+  <rect x="252" y="60" width="8" height="80" fill="#00ffff"/>
+  <rect x="252" y="372" width="8" height="80" fill="#00ffff"/>
+  <rect x="60" y="252" width="80" height="8" fill="#00ffff"/>
+  <rect x="372" y="252" width="80" height="8" fill="#00ffff"/>
+  <!-- Corner brackets -->
+  <path d="M100 140 L100 100 L140 100" fill="none" stroke="#00ffff" stroke-width="6"/>
+  <path d="M372 100 L412 100 L412 140" fill="none" stroke="#00ffff" stroke-width="6"/>
+  <path d="M412 372 L412 412 L372 412" fill="none" stroke="#00ffff" stroke-width="6"/>
+  <path d="M140 412 L100 412 L100 372" fill="none" stroke="#00ffff" stroke-width="6"/>
   <circle cx="256" cy="256" r="12" fill="#00d4ff"/>
   <text x="256" y="440" text-anchor="middle" fill="#00d4ff" font-family="Arial" font-size="48" font-weight="bold">AR</text>
 </svg>

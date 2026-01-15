@@ -2,9 +2,10 @@ window.onload = function() {
     console.log("Iron Man HUD Mk.X (Combat System) Initializing...");
 
     // === COMBAT SYSTEM CONFIG ===
-    const LOCK_TIME_TO_FIRE = 1500; // 1.5 שניות נעילה לפני ירי
-    const ENEMY_SPAWN_INTERVAL = 8000; // כל 8 שניות אויב חדש
+    const LOCK_TIME_TO_FIRE = 1200; // 1.2 שניות נעילה לפני ירי
+    const ENEMY_SPAWN_INTERVAL = 6000; // כל 6 שניות אויב חדש
     const MAX_ENEMIES = 3; // מקסימום אויבים במסך
+    const AI_SCAN_INTERVAL = 500; // סריקה כל 500ms (במקום 200ms)
     let lockStartTime = null;
     let currentTarget = null;
     let enemies = [];
@@ -549,7 +550,7 @@ window.onload = function() {
                 lastPredictions = predictions.filter(p => p.score >= 0.35);
             }).catch(e => {});
         }
-        setTimeout(aiScanLoop, 200); // Scan every 200ms
+        setTimeout(aiScanLoop, AI_SCAN_INTERVAL); // Optimized scan interval
     }
     
     function detectRealWorld() {
@@ -622,50 +623,83 @@ window.onload = function() {
         enemy.dataset.type = 'DRONE';
         
         // Random position on screen
-        const x = 20 + Math.random() * 60; // 20%-80% from left
-        const y = 20 + Math.random() * 40; // 20%-60% from top
+        const x = 15 + Math.random() * 70; // 15%-85% from left
+        const y = 15 + Math.random() * 50; // 15%-65% from top
+        const size = 60 + Math.random() * 40; // 60-100px
         
         enemy.style.cssText = `
             position: fixed;
             left: ${x}%;
             top: ${y}%;
-            width: 80px;
-            height: 80px;
+            width: ${size}px;
+            height: ${size}px;
             transform: translate(-50%, -50%);
             z-index: 5000;
             pointer-events: none;
         `;
         
+        // Impressive floating enemy visual
         enemy.innerHTML = `
-            <div style="
+            <div class="enemy-core" style="
+                position: relative;
                 width: 100%;
                 height: 100%;
-                border: 3px solid #ff0000;
-                border-radius: 50%;
-                background: radial-gradient(circle, rgba(255,0,0,0.3) 0%, transparent 70%);
-                animation: enemyPulse 1s ease-in-out infinite;
-                display: flex;
-                align-items: center;
-                justify-content: center;
             ">
+                <!-- Outer pulsing ring -->
                 <div style="
-                    width: 30px;
-                    height: 30px;
-                    background: #ff3300;
+                    position: absolute;
+                    inset: -10px;
+                    border: 2px solid rgba(255,0,0,0.5);
                     border-radius: 50%;
-                    box-shadow: 0 0 20px #ff0000;
+                    animation: enemyRingPulse 2s ease-in-out infinite;
+                "></div>
+                <!-- Middle ring -->
+                <div style="
+                    position: absolute;
+                    inset: 0;
+                    border: 3px solid #ff0000;
+                    border-radius: 50%;
+                    animation: enemySpin 4s linear infinite;
+                    box-shadow: 0 0 20px rgba(255,0,0,0.6), inset 0 0 20px rgba(255,0,0,0.3);
+                "></div>
+                <!-- Inner glow core -->
+                <div style="
+                    position: absolute;
+                    inset: 25%;
+                    background: radial-gradient(circle, #ff3300 0%, #aa0000 50%, transparent 70%);
+                    border-radius: 50%;
+                    animation: enemyCorePulse 1s ease-in-out infinite;
+                    box-shadow: 0 0 30px #ff0000;
+                "></div>
+                <!-- Crosshair lines -->
+                <div style="
+                    position: absolute;
+                    top: 50%; left: 0; right: 0;
+                    height: 1px;
+                    background: linear-gradient(90deg, transparent 0%, #ff0000 30%, #ff0000 70%, transparent 100%);
+                    transform: translateY(-50%);
+                "></div>
+                <div style="
+                    position: absolute;
+                    left: 50%; top: 0; bottom: 0;
+                    width: 1px;
+                    background: linear-gradient(180deg, transparent 0%, #ff0000 30%, #ff0000 70%, transparent 100%);
+                    transform: translateX(-50%);
                 "></div>
             </div>
+            <!-- Label -->
             <div style="
                 position: absolute;
-                bottom: -20px;
+                bottom: -22px;
                 left: 50%;
                 transform: translateX(-50%);
                 color: #ff0000;
-                font-size: 10px;
+                font-size: 9px;
                 font-weight: bold;
-                text-shadow: 0 0 5px #ff0000;
-            ">HOSTILE</div>
+                text-shadow: 0 0 8px #ff0000;
+                letter-spacing: 2px;
+                white-space: nowrap;
+            ">⚠ HOSTILE</div>
         `;
         
         document.body.appendChild(enemy);

@@ -1,7 +1,7 @@
 {
-  "version": "v87",
+  "version": "v88",
   "build": "2026.01.15",
-  "changelog": "תיקון מערכת קרב - אויבים overlay ללא WebXR",
+  "changelog": "אויבים מרשימים + אופטימיזציה + תיקון AI box",
   "files": [
     "index.html",
     "game.html",
