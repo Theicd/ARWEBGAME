@@ -1,7 +1,7 @@
 {
-  "version": "v91",
+  "version": "v94",
   "build": "2026.01.15",
-  "changelog": "דף כיול מערכת - GPU, AI, עומסים",
+  "changelog": "תיקון מצלמה כפולה - A-Frame הוסר, מצב 2D בלבד",
   "files": [
     "index.html",
     "game.html",

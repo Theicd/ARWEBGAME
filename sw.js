@@ -3,7 +3,7 @@
 // Auto-Update System
 // =============================================
 
-const CACHE_NAME = 'iron-ar-v91';
+const CACHE_NAME = 'iron-ar-v94';
 const VERSION_URL = './version.json';
 const CHECK_INTERVAL = 60000; // Check every 60 seconds
 
