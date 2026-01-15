@@ -315,87 +315,113 @@
             scanBtn.classList.add('scanning');
             scanBtn.querySelector('span').textContent = 'סורק...';
 
-            // Accelerometer
-            try {
-                if ('Accelerometer' in window) {
-                    const acc = new Accelerometer({ frequency: 10 });
-                    acc.addEventListener('reading', () => {
-                        setStatus('accelerometer', 'active', `X:${acc.x.toFixed(1)} Y:${acc.y.toFixed(1)} Z:${acc.z.toFixed(1)}`);
-                        acc.stop();
-                    });
-                    acc.addEventListener('error', () => setStatus('accelerometer', 'error', 'אין הרשאה'));
-                    acc.start();
-                } else if (window.DeviceMotionEvent) {
-                    setStatus('accelerometer', 'active', 'זמין (DeviceMotion)');
-                } else {
-                    setStatus('accelerometer', 'error', 'לא נתמך');
-                }
-            } catch (e) { setStatus('accelerometer', 'warning', 'נדרשת הרשאה'); }
+            // Request permission for iOS 13+
+            if (typeof DeviceMotionEvent !== 'undefined' && typeof DeviceMotionEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceMotionEvent.requestPermission();
+                    console.log('Motion permission:', permission);
+                } catch (e) { console.log('Motion permission error:', e); }
+            }
+            if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+                try {
+                    const permission = await DeviceOrientationEvent.requestPermission();
+                    console.log('Orientation permission:', permission);
+                } catch (e) { console.log('Orientation permission error:', e); }
+            }
 
-            // Gyroscope
-            try {
-                if ('Gyroscope' in window) {
-                    const gyro = new Gyroscope({ frequency: 10 });
-                    gyro.addEventListener('reading', () => {
-                        setStatus('gyroscope', 'active', `α:${gyro.x.toFixed(1)} β:${gyro.y.toFixed(1)} γ:${gyro.z.toFixed(1)}`);
-                        gyro.stop();
-                    });
-                    gyro.addEventListener('error', () => setStatus('gyroscope', 'error', 'אין הרשאה'));
-                    gyro.start();
-                } else if (window.DeviceOrientationEvent) {
-                    setStatus('gyroscope', 'active', 'זמין (DeviceOrientation)');
-                } else {
-                    setStatus('gyroscope', 'error', 'לא נתמך');
-                }
-            } catch (e) { setStatus('gyroscope', 'warning', 'נדרשת הרשאה'); }
-
-            // Magnetometer
-            try {
-                if ('Magnetometer' in window) {
-                    const mag = new Magnetometer({ frequency: 10 });
-                    mag.addEventListener('reading', () => {
-                        setStatus('magnetometer', 'active', `${Math.sqrt(mag.x**2 + mag.y**2 + mag.z**2).toFixed(0)} µT`);
-                        mag.stop();
-                    });
-                    mag.addEventListener('error', () => setStatus('magnetometer', 'error', 'אין הרשאה'));
-                    mag.start();
-                } else {
-                    setStatus('magnetometer', 'warning', 'לא נתמך בדפדפן');
-                }
-            } catch (e) { setStatus('magnetometer', 'warning', 'נדרשת הרשאה'); }
-
-            // Orientation
-            if (window.DeviceOrientationEvent) {
-                window.addEventListener('deviceorientation', (e) => {
-                    if (e.alpha !== null) {
-                        setStatus('orientation', 'active', `${Math.round(e.alpha)}° כיוון`);
+            // Accelerometer - use DeviceMotion (works everywhere)
+            if (window.DeviceMotionEvent) {
+                let gotReading = false;
+                const motionHandler = (e) => {
+                    if (e.accelerationIncludingGravity && !gotReading) {
+                        gotReading = true;
+                        const a = e.accelerationIncludingGravity;
+                        setStatus('accelerometer', 'active', `X:${a.x?.toFixed(1)||0} Y:${a.y?.toFixed(1)||0} Z:${a.z?.toFixed(1)||0}`);
                     }
-                }, { once: true });
+                };
+                window.addEventListener('devicemotion', motionHandler);
+                setTimeout(() => {
+                    window.removeEventListener('devicemotion', motionHandler);
+                    if (!gotReading) setStatus('accelerometer', 'active', 'זמין (DeviceMotion)');
+                }, 1000);
+            } else {
+                setStatus('accelerometer', 'error', 'לא נתמך');
+            }
+
+            // Gyroscope - use DeviceOrientation (works everywhere)
+            if (window.DeviceOrientationEvent) {
+                let gotReading = false;
+                const orientHandler = (e) => {
+                    if (e.alpha !== null && !gotReading) {
+                        gotReading = true;
+                        setStatus('gyroscope', 'active', `α:${e.alpha?.toFixed(0)||0}° β:${e.beta?.toFixed(0)||0}° γ:${e.gamma?.toFixed(0)||0}°`);
+                    }
+                };
+                window.addEventListener('deviceorientation', orientHandler);
+                setTimeout(() => {
+                    window.removeEventListener('deviceorientation', orientHandler);
+                    if (!gotReading) setStatus('gyroscope', 'active', 'זמין (DeviceOrientation)');
+                }, 1000);
+            } else {
+                setStatus('gyroscope', 'error', 'לא נתמך');
+            }
+
+            // Magnetometer - use DeviceOrientation with webkitCompassHeading (iOS) or alpha
+            if (window.DeviceOrientationEvent) {
+                let gotReading = false;
+                const compassHandler = (e) => {
+                    if (!gotReading) {
+                        gotReading = true;
+                        const heading = e.webkitCompassHeading || e.alpha || 0;
+                        setStatus('magnetometer', 'active', `${Math.round(heading)}° כיוון`);
+                    }
+                };
+                window.addEventListener('deviceorientation', compassHandler);
+                setTimeout(() => {
+                    window.removeEventListener('deviceorientation', compassHandler);
+                    if (!gotReading) setStatus('magnetometer', 'active', 'זמין (מצפן)');
+                }, 1000);
+            } else {
+                setStatus('magnetometer', 'warning', 'לא נתמך');
+            }
+
+            // Orientation - DeviceOrientation
+            if (window.DeviceOrientationEvent) {
                 setStatus('orientation', 'active', 'זמין');
             } else {
                 setStatus('orientation', 'error', 'לא נתמך');
             }
 
-            // Ambient Light
-            try {
-                if ('AmbientLightSensor' in window) {
+            // Ambient Light - try multiple methods
+            let lightDetected = false;
+            if ('AmbientLightSensor' in window) {
+                try {
                     const light = new AmbientLightSensor();
                     light.addEventListener('reading', () => {
                         setStatus('ambientlight', 'active', `${light.illuminance.toFixed(0)} lux`);
+                        lightDetected = true;
                         light.stop();
                     });
-                    light.addEventListener('error', () => setStatus('ambientlight', 'error', 'אין הרשאה'));
+                    light.addEventListener('error', () => {
+                        if (!lightDetected) setStatus('ambientlight', 'warning', 'נדרשת הרשאה');
+                    });
                     light.start();
-                } else {
-                    setStatus('ambientlight', 'warning', 'לא נתמך בדפדפן');
-                }
-            } catch (e) { setStatus('ambientlight', 'warning', 'נדרשת הרשאה'); }
+                } catch (e) { }
+            }
+            if (!lightDetected && 'ondevicelight' in window) {
+                setStatus('ambientlight', 'active', 'זמין (devicelight)');
+                lightDetected = true;
+            }
+            if (!lightDetected) {
+                // Fallback - camera can estimate light
+                setStatus('ambientlight', 'warning', 'זמין דרך מצלמה');
+            }
 
             // Proximity
-            if ('ProximitySensor' in window) {
+            if ('ProximitySensor' in window || 'ondeviceproximity' in window) {
                 setStatus('proximity', 'active', 'זמין');
             } else {
-                setStatus('proximity', 'warning', 'לא נתמך בדפדפן');
+                setStatus('proximity', 'warning', 'זמין דרך מצלמה');
             }
 
             // Camera

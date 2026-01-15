@@ -19,8 +19,9 @@
     
     <title>Iron Man AR · Combat Mode</title>
     <script>
+        // SW registration without notifications in game mode
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js');
+            navigator.serviceWorker.register('sw.js').catch(() => {});
         }
     </script>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
@@ -32,21 +33,23 @@
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
     <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
     <link rel="stylesheet" href="style_v9.css">
+    <style>
+        /* Black background until camera loads */
+        html, body {
+            background: #000 !important;
+        }
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: #000;
+            z-index: 0;
+            pointer-events: none;
+        }
+    </style>
 </head>
 <body>
-    <!-- Install Modal -->
-    <div id="install-modal">
-        <div class="modal-content">
-            <div style="color:#00ffff; font-weight:bold; font-size:20px; margin-bottom:15px;">
-                ⚡ TACTICAL OS ⚡
-            </div>
-            <div style="color:#aaa; font-size:14px; margin-bottom:20px;">
-                התקן את הקסדה למסך הבית<br>לחוויה מלאה ללא דפדפן
-            </div>
-            <button id="modal-install" class="modal-btn">✓ התקן</button>
-            <button id="modal-close" class="modal-btn" style="border-color:#ff3300; color:#ff3300;">✕ ביטול</button>
-        </div>
-    </div>
+    <!-- NO MODALS IN GAME MODE - Clean HUD only -->
 
     <!-- HUD -->
     <div id="hud">
@@ -133,7 +136,7 @@
                         <span class="val" id="val-mag">--</span>
                     </div>
                 </div>
-                <button id="hud-install" style="pointer-events: auto;">INSTALL</button>
+                <!-- No install button in game mode -->
             </div>
         </div>
     </div>

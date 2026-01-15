@@ -611,12 +611,215 @@ window.onload = function() {
     // Start combat loop and AI scan
     combatLoop();
     aiScanLoop();
+    
+    // === OVERLAY ENEMIES (Fallback for non-WebXR) ===
+    let overlayEnemies = [];
+    
+    function createOverlayEnemy() {
+        const enemy = document.createElement('div');
+        enemy.className = 'overlay-enemy';
+        enemy.dataset.health = '100';
+        enemy.dataset.type = 'DRONE';
+        
+        // Random position on screen
+        const x = 20 + Math.random() * 60; // 20%-80% from left
+        const y = 20 + Math.random() * 40; // 20%-60% from top
+        
+        enemy.style.cssText = `
+            position: fixed;
+            left: ${x}%;
+            top: ${y}%;
+            width: 80px;
+            height: 80px;
+            transform: translate(-50%, -50%);
+            z-index: 5000;
+            pointer-events: none;
+        `;
+        
+        enemy.innerHTML = `
+            <div style="
+                width: 100%;
+                height: 100%;
+                border: 3px solid #ff0000;
+                border-radius: 50%;
+                background: radial-gradient(circle, rgba(255,0,0,0.3) 0%, transparent 70%);
+                animation: enemyPulse 1s ease-in-out infinite;
+                display: flex;
+                align-items: center;
+                justify-content: center;
+            ">
+                <div style="
+                    width: 30px;
+                    height: 30px;
+                    background: #ff3300;
+                    border-radius: 50%;
+                    box-shadow: 0 0 20px #ff0000;
+                "></div>
+            </div>
+            <div style="
+                position: absolute;
+                bottom: -20px;
+                left: 50%;
+                transform: translateX(-50%);
+                color: #ff0000;
+                font-size: 10px;
+                font-weight: bold;
+                text-shadow: 0 0 5px #ff0000;
+            ">HOSTILE</div>
+        `;
+        
+        document.body.appendChild(enemy);
+        overlayEnemies.push(enemy);
+        
+        // Random movement
+        let moveX = (Math.random() - 0.5) * 2;
+        let moveY = (Math.random() - 0.5) * 1;
+        
+        enemy._moveInterval = setInterval(() => {
+            let currentX = parseFloat(enemy.style.left);
+            let currentY = parseFloat(enemy.style.top);
+            
+            currentX += moveX;
+            currentY += moveY;
+            
+            // Bounce off edges
+            if(currentX < 15 || currentX > 85) moveX *= -1;
+            if(currentY < 15 || currentY > 65) moveY *= -1;
+            
+            enemy.style.left = currentX + '%';
+            enemy.style.top = currentY + '%';
+        }, 50);
+        
+        console.log('Overlay enemy created');
+        return enemy;
+    }
+    
+    function checkOverlayEnemyLock() {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        
+        for(let enemy of overlayEnemies) {
+            const rect = enemy.getBoundingClientRect();
+            const enemyCX = rect.left + rect.width / 2;
+            const enemyCY = rect.top + rect.height / 2;
+            
+            const dist = Math.sqrt(Math.pow(cx - enemyCX, 2) + Math.pow(cy - enemyCY, 2));
+            
+            // If crosshair is within 100px of enemy center
+            if(dist < 100) {
+                // Calculate fake distance based on enemy size
+                const fakeDistance = Math.max(2, 15 - (rect.width / 10));
+                return { enemy, distance: fakeDistance };
+            }
+        }
+        return null;
+    }
+    
+    function fireAtOverlayEnemy(enemy) {
+        console.log('FIRING at overlay enemy!');
+        
+        // Flash effect
+        enemy.style.filter = 'brightness(3)';
+        setTimeout(() => enemy.style.filter = '', 100);
+        
+        // Damage
+        let health = parseInt(enemy.dataset.health) || 100;
+        health -= 50;
+        enemy.dataset.health = health;
+        
+        if(navigator.vibrate) navigator.vibrate([50, 30, 100]);
+        
+        if(health <= 0) {
+            destroyOverlayEnemy(enemy);
+        }
+    }
+    
+    function destroyOverlayEnemy(enemy) {
+        console.log('ENEMY DESTROYED!');
+        kills++;
+        
+        clearInterval(enemy._moveInterval);
+        
+        // Explosion effect
+        enemy.innerHTML = `
+            <div style="
+                width: 120px;
+                height: 120px;
+                background: radial-gradient(circle, #ffff00 0%, #ff6600 50%, transparent 70%);
+                border-radius: 50%;
+                animation: explode 0.3s ease-out forwards;
+            "></div>
+        `;
+        
+        setTimeout(() => {
+            enemy.remove();
+            overlayEnemies = overlayEnemies.filter(e => e !== enemy);
+        }, 300);
+        
+        if(targetNameEl) {
+            targetNameEl.textContent = 'KILL CONFIRMED';
+            targetNameEl.style.color = '#00ff00';
+        }
+        
+        if(navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);
+    }
+    
+    // Override combat loop to also check overlay enemies
+    function overlayLoop() {
+        // Check overlay enemies if not in WebXR
+        if(!isInAR && overlayEnemies.length > 0) {
+            const lock = checkOverlayEnemyLock();
+            
+            if(lock) {
+                if(reticleBox) reticleBox.classList.add('locked');
+                
+                if(targetNameEl) {
+                    targetNameEl.textContent = '⚠ HOSTILE DRONE';
+                    targetNameEl.style.color = '#ff3300';
+                }
+                
+                if(rangeValueEl) {
+                    rangeValueEl.textContent = lock.distance.toFixed(1);
+                    rangeValueEl.style.color = '#ff3300';
+                }
+                
+                // Lock timer
+                if(currentTarget !== lock.enemy) {
+                    currentTarget = lock.enemy;
+                    lockStartTime = Date.now();
+                } else if(lockStartTime && Date.now() - lockStartTime >= LOCK_TIME_TO_FIRE) {
+                    fireAtOverlayEnemy(lock.enemy);
+                    lockStartTime = Date.now();
+                }
+            } else {
+                currentTarget = null;
+                lockStartTime = null;
+                if(reticleBox) reticleBox.classList.remove('locked');
+            }
+        }
+        
+        requestAnimationFrame(overlayLoop);
+    }
+    overlayLoop();
+    
+    // Spawn overlay enemies periodically if not in AR
+    setInterval(() => {
+        if(!isInAR && overlayEnemies.length < MAX_ENEMIES) {
+            createOverlayEnemy();
+        }
+    }, ENEMY_SPAWN_INTERVAL);
+    
+    // Spawn first enemy after 3 seconds
+    setTimeout(() => {
+        if(!isInAR) createOverlayEnemy();
+    }, 3000);
 
     // === TAP TO SPAWN ENEMY ===
-    document.addEventListener('click', () => {
+    document.addEventListener('click', (e) => {
+        if(e.target.id === 'enter-ar-btn') return;
         // Spawn enemy on tap (if less than max)
-        if(enemies.length < MAX_ENEMIES) {
-            createEnemyOverlay();
+        if(!isInAR && overlayEnemies.length < MAX_ENEMIES) {
+            createOverlayEnemy();
             if(navigator.vibrate) navigator.vibrate(30);
         }
     });

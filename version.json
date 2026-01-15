@@ -1,7 +1,7 @@
 {
-  "version": "v85",
+  "version": "v87",
   "build": "2026.01.15",
-  "changelog": "תמיכה במצב אנכי ורוחבי + מערכת עדכון אוטומטי",
+  "changelog": "תיקון מערכת קרב - אויבים overlay ללא WebXR",
   "files": [
     "index.html",
     "game.html",
