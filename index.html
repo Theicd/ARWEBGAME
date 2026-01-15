@@ -2,8 +2,17 @@
 <html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>משחק מציאות רבודה</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <title>Iron Man AR Mk.IV</title>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js');
+        }
+    </script>
     <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
     <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
@@ -24,46 +33,71 @@
         <div id="boot-log" style="margin-top: 20px; font-size: 12px; height: 100px; overflow: hidden; text-align: left; width: 300px; color: rgba(0, 255, 255, 0.7);"></div>
     </div>
 
-    <div id="hud" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; color: #00ffff; font-family: 'Courier New', monospace; pointer-events: none; z-index: 100; display: none;">
-        <div class="scan-line"></div>
-        
-        <!-- Top Left: Energy & Systems -->
-        <div class="hud-panel" style="top: 20px; left: 20px; border-top-right-radius: 20px;">
-            <h3 style="margin: 0; border-bottom: 1px solid #00ffff; padding-bottom: 5px;">SYSTEM STATUS</h3>
-            <p style="margin: 5px 0;">ENERGY: <span id="energy">100%</span></p>
-            <p style="margin: 5px 0;">TEMP: <span id="temp">98.6°F</span></p>
-            <p style="margin: 5px 0;">ALTITUDE: <span id="altitude">0m</span></p>
+    <div id="hud">
+        <!-- TOP: FULL WIDTH COMPASS ONLY -->
+        <div class="compass-container-full">
+            <div class="heading-display"><span id="heading-val">000</span>°</div>
+            <div class="compass-tape-window">
+                <div class="compass-strip" id="compass-ticks">
+                    <span>N</span><span>|</span><span>|</span><span>|</span>
+                    <span>E</span><span>|</span><span>|</span><span>|</span>
+                    <span>S</span><span>|</span><span>|</span><span>|</span>
+                    <span>W</span><span>|</span><span>|</span><span>|</span>
+                    <span>N</span><span>|</span><span>|</span><span>|</span>
+                </div>
+                <div class="compass-marker"></div>
+            </div>
         </div>
 
-        <!-- Top Right: Data Stream & Radar -->
-        <div class="hud-panel" style="top: 20px; right: 20px; border-top-left-radius: 20px; text-align: right;">
-            <h3 style="margin: 0; border-bottom: 1px solid #00ffff; padding-bottom: 5px;">TACTICAL FEED</h3>
-            <p style="margin: 5px 0;" id="target-lock">SCANNING...</p>
-            <div id="data-stream" style="font-size: 10px; opacity: 0.7;">DATA: INITIALIZING...</div>
+        <!-- CENTER: RETICLE -->
+        <div class="reticle-center">
+            <div class="crosshair-h"></div>
+            <div class="crosshair-v"></div>
         </div>
 
-        <!-- Bottom Left: Armor Status -->
-        <div class="hud-panel" style="bottom: 20px; left: 20px; border-bottom-right-radius: 20px;">
-             <h3 style="margin: 0; border-bottom: 1px solid #00ffff; padding-bottom: 5px;">ARMOR INTEGRITY</h3>
-             <div style="display: flex; gap: 5px; margin-top: 5px;">
-                 <div style="width: 20px; height: 40px; background: rgba(0, 255, 255, 0.3); border: 1px solid #00ffff;"></div>
-                 <div style="width: 20px; height: 40px; background: rgba(0, 255, 255, 0.3); border: 1px solid #00ffff;"></div>
-                 <div style="width: 20px; height: 40px; background: rgba(0, 255, 255, 0.3); border: 1px solid #00ffff;"></div>
-             </div>
-        </div>
+        <!-- BOTTOM: TACTICAL DASHBOARD -->
+        <div class="bottom-dashboard">
+            <!-- Bottom Left: SYSTEMS -->
+            <div class="hud-panel left-panel">
+                <div class="panel-header">SYSTEMS</div>
+                <div class="row">
+                    <span class="label">PWR</span>
+                    <span class="val" id="battery-level">100%</span>
+                </div>
+                <div class="row">
+                    <span class="label">G-FORCE</span>
+                    <span class="val" id="g-force">1.0</span>
+                </div>
+                <div class="row">
+                    <span class="label">LIGHT</span>
+                    <span class="val"><span id="lux-level">--</span> Lx</span>
+                </div>
+                <div class="row">
+                    <span class="label">EM FIELD</span>
+                    <span class="val"><span id="emf-level">--</span> uT</span>
+                </div>
+            </div>
 
-        <!-- Bottom Right: Weapon Systems -->
-        <div class="hud-panel" style="bottom: 20px; right: 20px; border-bottom-left-radius: 20px; text-align: right;">
-             <h3 style="margin: 0; border-bottom: 1px solid #00ffff; padding-bottom: 5px;">WEAPONS</h3>
-             <p style="margin: 5px 0;">REPULSOR: <span style="color: #00ff00;">ONLINE</span></p>
-             <p style="margin: 5px 0;">UNIBEAM: <span style="color: #ffff00;">CHARGING</span></p>
-             <p style="margin: 5px 0;">MISSILES: <span style="color: #00ff00;">READY</span></p>
-        </div>
+            <!-- Bottom Center: VOICE -->
+            <div class="voice-center" id="voice-viz">
+                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            </div>
 
-        <!-- Center Reticle -->
-        <div id="reticle" class="reticle">
-            <div style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); font-size: 10px;">AIM</div>
-            <div style="position: absolute; bottom: -15px; left: 50%; transform: translateX(-50%); font-size: 10px; white-space: nowrap;" id="lock-status">NO TARGET</div>
+            <!-- Bottom Right: TARGETING -->
+            <div class="hud-panel right-panel">
+                <div class="panel-header">TARGETING</div>
+                <div class="target-display">
+                    <div class="rf-value"><span id="rf-dist">----</span> <span style="font-size:12px">M</span></div>
+                    <div class="rf-target" id="rf-name">SCANNING</div>
+                </div>
+                <div class="gps-sub">
+                    <span>ALT: <span id="altitude-val">--</span></span>
+                    <span>SPD: <span id="speed-val">0</span></span>
+                </div>
+            </div>
         </div>
     </div>
     
@@ -73,7 +107,7 @@
         <!-- Reticle for surface detection -->
         <a-entity id="reticle-target" hit-test-controls="mode: origin" visible="false">
             <a-ring rotation="-90 0 0" color="#00ffff" radius-inner="0.1" radius-outer="0.15" opacity="0.8" animation="property: scale; from: 1 1 1; to: 1.2 1.2 1.2; dir: alternate; loop: true; dur: 1000"></a-ring>
-            <a-circle rotation="-90 0 0" color="#00ffff" radius="0.05" opacity="0.3"></a-circle>fals
+            <a-circle rotation="-90 0 0" color="#00ffff" radius="0.05" opacity="0.3"></a-circle>
         </a-entity>
 
         <a-marker preset="hiro">
