@@ -1,9 +1,9 @@
-const CACHE_NAME = 'iron-ar-v19-tactical-final';
+const CACHE_NAME = 'iron-ar-v74-ai-scan';
 const urlsToCache = [
   './',
   './index.html',
-  './style.css',
-  './game_logic.js',
+  './style_v9.css',
+  './game_logic_v10.js',
   './manifest.json'
 ];
 
