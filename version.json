@@ -1,0 +1,15 @@
+{
+  "version": "v85",
+  "build": "2026.01.15",
+  "changelog": "תמיכה במצב אנכי ורוחבי + מערכת עדכון אוטומטי",
+  "files": [
+    "index.html",
+    "game.html",
+    "sensors.html",
+    "functions.html",
+    "menu.css",
+    "style_v9.css",
+    "game_logic_v10.js",
+    "sw.js"
+  ]
+}
