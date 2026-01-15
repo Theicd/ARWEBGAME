@@ -3,7 +3,7 @@
 // Auto-Update System
 // =============================================
 
-const CACHE_NAME = 'iron-ar-v88';
+const CACHE_NAME = 'iron-ar-v91';
 const VERSION_URL = './version.json';
 const CHECK_INTERVAL = 60000; // Check every 60 seconds
 
@@ -13,6 +13,11 @@ const PRECACHE_URLS = [
   './menu.css',
   './sensors.html',
   './functions.html',
+  './logs.html',
+  './logger.js',
+  './calibration.html',
+  './calibration.js',
+  './diagnostics.html',
   './game.html',
   './style_v9.css',
   './game_logic_v10.js',

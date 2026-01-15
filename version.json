@@ -1,7 +1,7 @@
 {
-  "version": "v88",
+  "version": "v91",
   "build": "2026.01.15",
-  "changelog": "אויבים מרשימים + אופטימיזציה + תיקון AI box",
+  "changelog": "דף כיול מערכת - GPU, AI, עומסים",
   "files": [
     "index.html",
     "game.html",

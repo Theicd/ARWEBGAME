@@ -1,5 +1,26 @@
 window.onload = function() {
+    // === LOGGING SYSTEM ===
+    const L = window.IronLogger || { 
+        log: () => {}, ai: () => {}, ar: () => {}, combat: () => {}, 
+        sensor: () => {}, perf: () => {}, error: () => {},
+        perfStart: () => {}, perfEnd: () => {}
+    };
+    
+    L.log('SYSTEM', 'GAME_INIT', { page: 'game.html', timestamp: new Date().toISOString() });
     console.log("Iron Man HUD Mk.X (Combat System) Initializing...");
+
+    // === ROOM CALIBRATION DATA ===
+    let roomData = null;
+    if(typeof RoomCalibration !== 'undefined') {
+        roomData = RoomCalibration.loadStatic();
+        if(roomData && roomData.calibrated) {
+            L.log('SYSTEM', 'ROOM_DATA_LOADED', { 
+                avgDistance: roomData.avgDistance,
+                roomSize: roomData.roomSize
+            });
+            console.log("Room calibration loaded:", roomData.roomSize, "room, avg:", roomData.avgDistance.toFixed(1) + "m");
+        }
+    }
 
     // === COMBAT SYSTEM CONFIG ===
     const LOCK_TIME_TO_FIRE = 1200; // 1.2 שניות נעילה לפני ירי
@@ -262,12 +283,14 @@ window.onload = function() {
             }
             
             try {
+                L.ar('SESSION_STARTING', { features: ['hit-test', 'dom-overlay', 'local-floor'] });
                 xrSession = await navigator.xr.requestSession('immersive-ar', {
                     requiredFeatures: ['hit-test'],
                     optionalFeatures: ['dom-overlay', 'local-floor'],
                     domOverlay: { root: document.getElementById('hud') }
                 });
                 
+                L.ar('SESSION_STARTED', { success: true });
                 enterARBtn.style.display = 'none';
                 isInAR = true;
                 
@@ -387,6 +410,7 @@ window.onload = function() {
     }
     
     function fireAtEnemy(enemy, distance) {
+        L.combat('FIRE', { enemyId: enemy.id, distance: distance, health: enemy.dataset.health });
         console.log('FIRING AT:', enemy.id);
         
         // Vibrate
@@ -416,6 +440,7 @@ window.onload = function() {
     }
     
     function destroyEnemy(enemy) {
+        L.combat('KILL', { enemyId: enemy.id, totalKills: kills + 1 });
         console.log('ENEMY DESTROYED:', enemy.id);
         kills++;
         
@@ -455,10 +480,19 @@ window.onload = function() {
     let aiModel = null;
     
     if(typeof cocoSsd !== 'undefined') {
+        L.ai('MODEL_LOADING', { status: 'starting' });
+        L.perfStart('ai_model_load');
         cocoSsd.load().then(model => {
             aiModel = model;
+            const loadTime = L.perfEnd('ai_model_load');
+            L.ai('MODEL_LOADED', { loadTime: loadTime });
             console.log("AI Model loaded");
-        }).catch(e => console.log("AI load error:", e));
+        }).catch(e => {
+            L.error('AI_MODEL', e);
+            console.log("AI load error:", e);
+        });
+    } else {
+        L.ai('MODEL_UNAVAILABLE', { reason: 'cocoSsd not defined' });
     }
 
     // Main detection loop
@@ -543,14 +577,44 @@ window.onload = function() {
     // Continuous AI scanning (runs always)
     let lastPredictions = [];
     
+    let aiScanCount = 0;
+    let lastAiScanTime = 0;
+    
     function aiScanLoop() {
         const video = document.querySelector('video');
+        const now = Date.now();
+        
         if(video && aiModel && video.readyState === 4) {
+            L.perfStart('ai_detect');
             aiModel.detect(video).then(predictions => {
+                const detectTime = L.perfEnd('ai_detect');
                 lastPredictions = predictions.filter(p => p.score >= 0.35);
-            }).catch(e => {});
+                aiScanCount++;
+                
+                // Log every 10th scan to avoid spam
+                if(aiScanCount % 10 === 0) {
+                    L.ai('SCAN_RESULT', { 
+                        scanNum: aiScanCount,
+                        detectTime: detectTime,
+                        objectsFound: lastPredictions.length,
+                        objects: lastPredictions.map(p => ({ class: p.class, score: Math.round(p.score * 100) }))
+                    });
+                }
+            }).catch(e => {
+                L.error('AI_DETECT', e);
+            });
+        } else {
+            // Log why scan didn't run
+            if(aiScanCount === 0 && now - lastAiScanTime > 5000) {
+                L.ai('SCAN_BLOCKED', {
+                    hasVideo: !!video,
+                    hasModel: !!aiModel,
+                    videoReady: video ? video.readyState : 'N/A'
+                });
+                lastAiScanTime = now;
+            }
         }
-        setTimeout(aiScanLoop, AI_SCAN_INTERVAL); // Optimized scan interval
+        setTimeout(aiScanLoop, AI_SCAN_INTERVAL);
     }
     
     function detectRealWorld() {
@@ -596,8 +660,29 @@ window.onload = function() {
                 targetNameEl.style.color = '#00ffff';
             }
             const heightPercent = (found.bbox[3] * scale) / window.innerHeight;
+            
+            // Calculate distance - use room calibration if available
+            let distance = 1.5 / heightPercent; // Basic calculation
+            
+            if(roomData && roomData.calibrated && roomData.avgDistance > 0) {
+                // Adjust based on room calibration
+                const maxDist = roomData.avgDistance * 1.2;
+                distance = Math.min(distance, maxDist);
+                
+                // Known object sizes for better accuracy
+                const knownSizes = {
+                    'person': 1.7, 'chair': 0.9, 'tv': 0.6, 
+                    'laptop': 0.3, 'bottle': 0.25, 'cell phone': 0.15
+                };
+                
+                if(knownSizes[found.class]) {
+                    const realHeight = knownSizes[found.class];
+                    distance = realHeight / heightPercent;
+                }
+            }
+            
             if(rangeValueEl) {
-                rangeValueEl.textContent = (1.5 / heightPercent).toFixed(1);
+                rangeValueEl.textContent = distance.toFixed(1);
                 rangeValueEl.style.color = '#00ffff';
             }
         } else {

@@ -1,0 +1,805 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#00d4ff">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Iron AR · System Diagnostics</title>
+    
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <script src="logger.js"></script>
+    <link rel="stylesheet" href="style_v9.css">
+    
+    <style>
+        html, body { background: #000 !important; }
+        
+        /* Diagnostics Panel */
+        .diag-panel {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            right: 10px;
+            width: 280px;
+            max-height: 90vh;
+            overflow-y: auto;
+            background: rgba(0,10,20,0.95);
+            border: 1px solid #00ffff;
+            border-radius: 8px;
+            z-index: 20000;
+            font-size: 11px;
+        }
+        
+        .diag-header {
+            background: linear-gradient(90deg, #00ffff, #0066ff);
+            color: #000;
+            padding: 8px 12px;
+            font-weight: bold;
+            font-size: 12px;
+            letter-spacing: 2px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .diag-section {
+            padding: 10px;
+            border-bottom: 1px solid #333;
+        }
+        
+        .diag-section:last-child {
+            border-bottom: none;
+        }
+        
+        .diag-title {
+            color: #00ffff;
+            font-size: 10px;
+            letter-spacing: 2px;
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .diag-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 3px 0;
+            color: #aaa;
+        }
+        
+        .diag-row .label { color: #666; }
+        .diag-row .value { color: #fff; font-family: monospace; }
+        .diag-row .value.good { color: #00ff00; }
+        .diag-row .value.warn { color: #ffff00; }
+        .diag-row .value.bad { color: #ff3300; }
+        
+        .status-indicator {
+            display: inline-block;
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            margin-left: 5px;
+        }
+        
+        .status-indicator.active { background: #00ff00; box-shadow: 0 0 5px #00ff00; }
+        .status-indicator.loading { background: #ffff00; animation: blink 0.5s infinite; }
+        .status-indicator.error { background: #ff3300; }
+        .status-indicator.off { background: #444; }
+        
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
+        
+        .progress-bar {
+            height: 6px;
+            background: #333;
+            border-radius: 3px;
+            overflow: hidden;
+            margin-top: 5px;
+        }
+        
+        .progress-fill {
+            height: 100%;
+            transition: width 0.3s;
+        }
+        
+        .progress-fill.cpu { background: linear-gradient(90deg, #00ff00, #ffff00, #ff3300); }
+        .progress-fill.gpu { background: linear-gradient(90deg, #00ffff, #ff00ff); }
+        .progress-fill.mem { background: linear-gradient(90deg, #00ff88, #ff8800); }
+        
+        /* Back button */
+        .back-btn {
+            position: fixed;
+            bottom: max(20px, env(safe-area-inset-bottom));
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 30px;
+            background: rgba(0,255,255,0.1);
+            border: 2px solid #00ffff;
+            color: #00ffff;
+            font-size: 14px;
+            border-radius: 25px;
+            z-index: 20001;
+            cursor: pointer;
+        }
+        
+        /* Toggle button */
+        .toggle-panel {
+            position: fixed;
+            top: max(10px, env(safe-area-inset-top));
+            left: 10px;
+            padding: 8px 15px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #00ffff;
+            color: #00ffff;
+            font-size: 12px;
+            border-radius: 5px;
+            z-index: 20001;
+            cursor: pointer;
+        }
+        
+        /* FPS counter */
+        .fps-display {
+            position: fixed;
+            top: max(50px, calc(env(safe-area-inset-top) + 40px));
+            left: 10px;
+            padding: 5px 10px;
+            background: rgba(0,0,0,0.8);
+            border: 1px solid #00ff00;
+            color: #00ff00;
+            font-size: 16px;
+            font-family: monospace;
+            font-weight: bold;
+            border-radius: 5px;
+            z-index: 20001;
+        }
+        
+        .fps-display.warn { border-color: #ffff00; color: #ffff00; }
+        .fps-display.bad { border-color: #ff3300; color: #ff3300; }
+    </style>
+</head>
+<body>
+    <!-- A-Frame Scene for camera -->
+    <a-scene 
+        embedded
+        renderer="antialias: true; alpha: true; precision: medium"
+        vr-mode-ui="enabled: false"
+        loading-screen="enabled: false">
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <!-- HUD (same as game) -->
+    <div id="hud">
+        <!-- Top HUD -->
+        <div class="top-hud">
+            <div class="compass-container">
+                <div class="compass-strip" id="compass-strip"></div>
+                <div class="compass-pointer">▼</div>
+            </div>
+            <div class="top-data">
+                <div class="data-item">
+                    <span class="data-label">HDG</span>
+                    <span class="data-value" id="heading-num">---</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">ALT</span>
+                    <span class="data-value" id="val-alt">--</span>
+                </div>
+                <div class="data-item">
+                    <span class="data-label">SPD</span>
+                    <span class="data-value" id="val-spd">--</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Center - Reticle -->
+        <div class="reticle-box" id="reticle-box">
+            <div class="ring-outer"></div>
+            <div class="ring-middle"></div>
+            <div class="ring-inner"></div>
+            <div class="reticle-cross"></div>
+        </div>
+        
+        <div class="rangefinder">
+            <div class="range-value" id="range-value">--.-</div>
+            <div class="range-label">RANGE (m)</div>
+            <div class="target-name" id="target-name">DIAGNOSTICS MODE</div>
+        </div>
+
+        <!-- AI Detection Box -->
+        <div class="ai-detection-box">
+            <div class="ai-header">
+                <span class="ai-icon">◉</span>
+                <span>AI SCAN</span>
+            </div>
+            <div class="ai-object-list" id="ai-object-list">
+                <div class="ai-item scanning">INITIALIZING...</div>
+            </div>
+        </div>
+
+        <!-- Bottom HUD -->
+        <div class="bottom-hud">
+            <div class="hud-panel">
+                <div class="hud-row">
+                    <div class="data-block">
+                        <span class="lbl">PWR</span>
+                        <span class="val" id="val-pwr">--%</span>
+                    </div>
+                    <div class="data-block">
+                        <span class="lbl">G</span>
+                        <span class="val" id="val-g">0.0</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="hud-panel">
+                <div class="voice-box">
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                    <div class="v-bar"></div>
+                </div>
+            </div>
+            
+            <div class="hud-panel">
+                <div class="hud-row">
+                    <div class="data-block">
+                        <span class="lbl">LUX</span>
+                        <span class="val" id="val-lux">--</span>
+                    </div>
+                    <div class="data-block">
+                        <span class="lbl">MAG</span>
+                        <span class="val" id="val-mag">--</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- FPS Display -->
+    <div class="fps-display" id="fps-display">-- FPS</div>
+    
+    <!-- Toggle Panel Button -->
+    <button class="toggle-panel" onclick="togglePanel()">
+        <i class="fas fa-chart-bar"></i> מידע מערכת
+    </button>
+
+    <!-- Diagnostics Panel -->
+    <div class="diag-panel" id="diag-panel">
+        <div class="diag-header">
+            <span>🔧 SYSTEM DIAGNOSTICS</span>
+            <span id="diag-time">--:--:--</span>
+        </div>
+        
+        <!-- GPU Info -->
+        <div class="diag-section">
+            <div class="diag-title">🎮 GPU / RENDERER</div>
+            <div class="diag-row">
+                <span class="label">Vendor</span>
+                <span class="value" id="gpu-vendor">--</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Renderer</span>
+                <span class="value" id="gpu-renderer">--</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">WebGL</span>
+                <span class="value" id="gpu-webgl">--</span>
+            </div>
+        </div>
+        
+        <!-- Performance -->
+        <div class="diag-section">
+            <div class="diag-title">⚡ PERFORMANCE</div>
+            <div class="diag-row">
+                <span class="label">FPS</span>
+                <span class="value" id="perf-fps">--</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Frame Time</span>
+                <span class="value" id="perf-frame">-- ms</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">JS Heap</span>
+                <span class="value" id="perf-heap">-- MB</span>
+            </div>
+            <div class="progress-bar">
+                <div class="progress-fill cpu" id="cpu-bar" style="width: 0%"></div>
+            </div>
+        </div>
+        
+        <!-- AI Status -->
+        <div class="diag-section">
+            <div class="diag-title">🤖 AI ENGINE</div>
+            <div class="diag-row">
+                <span class="label">TensorFlow.js</span>
+                <span class="value" id="ai-tf">
+                    <span class="status-indicator loading"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">COCO-SSD Model</span>
+                <span class="value" id="ai-model">
+                    <span class="status-indicator loading"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Detection Time</span>
+                <span class="value" id="ai-detect-time">-- ms</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Objects Found</span>
+                <span class="value" id="ai-objects">0</span>
+            </div>
+        </div>
+        
+        <!-- Camera Status -->
+        <div class="diag-section">
+            <div class="diag-title">📷 CAMERA</div>
+            <div class="diag-row">
+                <span class="label">Status</span>
+                <span class="value" id="cam-status">
+                    <span class="status-indicator loading"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Resolution</span>
+                <span class="value" id="cam-res">--</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Frame Rate</span>
+                <span class="value" id="cam-fps">-- fps</span>
+            </div>
+        </div>
+        
+        <!-- Sensors Status -->
+        <div class="diag-section">
+            <div class="diag-title">📡 SENSORS</div>
+            <div class="diag-row">
+                <span class="label">Compass</span>
+                <span class="value" id="sens-compass">
+                    <span class="status-indicator off"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Accelerometer</span>
+                <span class="value" id="sens-accel">
+                    <span class="status-indicator off"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Gyroscope</span>
+                <span class="value" id="sens-gyro">
+                    <span class="status-indicator off"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Light Sensor</span>
+                <span class="value" id="sens-light">
+                    <span class="status-indicator off"></span>
+                </span>
+            </div>
+        </div>
+        
+        <!-- Device Info -->
+        <div class="diag-section">
+            <div class="diag-title">📱 DEVICE</div>
+            <div class="diag-row">
+                <span class="label">Screen</span>
+                <span class="value" id="dev-screen">--</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Pixel Ratio</span>
+                <span class="value" id="dev-dpr">--</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Battery</span>
+                <span class="value" id="dev-battery">--%</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Memory</span>
+                <span class="value" id="dev-memory">-- GB</span>
+            </div>
+        </div>
+        
+        <!-- Calibration Status -->
+        <div class="diag-section">
+            <div class="diag-title">🎯 CALIBRATION</div>
+            <div class="diag-row">
+                <span class="label">Room Calibrated</span>
+                <span class="value" id="cal-status">
+                    <span class="status-indicator off"></span>
+                </span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Avg Distance</span>
+                <span class="value" id="cal-dist">-- m</span>
+            </div>
+            <div class="diag-row">
+                <span class="label">Room Size</span>
+                <span class="value" id="cal-size">--</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Back Button -->
+    <button class="back-btn" onclick="location.href='index.html'">
+        ← חזרה לתפריט
+    </button>
+
+    <script>
+        // === DIAGNOSTICS SYSTEM ===
+        const L = window.IronLogger || { log: () => {}, perf: () => {}, perfStart: () => {}, perfEnd: () => {} };
+        L.log('DIAGNOSTICS', 'INIT', { timestamp: new Date().toISOString() });
+        
+        // DOM Elements
+        const diagPanel = document.getElementById('diag-panel');
+        const fpsDisplay = document.getElementById('fps-display');
+        const headingEl = document.getElementById('heading-num');
+        const rangeValueEl = document.getElementById('range-value');
+        const targetNameEl = document.getElementById('target-name');
+        const aiObjectList = document.getElementById('ai-object-list');
+        const voiceBars = document.querySelectorAll('.v-bar');
+        
+        // Toggle panel visibility
+        let panelVisible = true;
+        function togglePanel() {
+            panelVisible = !panelVisible;
+            diagPanel.style.display = panelVisible ? 'block' : 'none';
+        }
+        
+        // === GPU INFO ===
+        function getGPUInfo() {
+            const canvas = document.createElement('canvas');
+            const gl = canvas.getContext('webgl') || canvas.getContext('experimental-webgl');
+            
+            if(gl) {
+                const debugInfo = gl.getExtension('WEBGL_debug_renderer_info');
+                if(debugInfo) {
+                    document.getElementById('gpu-vendor').textContent = 
+                        gl.getParameter(debugInfo.UNMASKED_VENDOR_WEBGL) || 'Unknown';
+                    document.getElementById('gpu-renderer').textContent = 
+                        gl.getParameter(debugInfo.UNMASKED_RENDERER_WEBGL) || 'Unknown';
+                }
+                document.getElementById('gpu-webgl').innerHTML = 
+                    '<span class="status-indicator active"></span> WebGL 1.0';
+            } else {
+                document.getElementById('gpu-webgl').innerHTML = 
+                    '<span class="status-indicator error"></span> Not Available';
+            }
+        }
+        getGPUInfo();
+        
+        // === FPS COUNTER ===
+        let frameCount = 0;
+        let lastFpsTime = performance.now();
+        let currentFps = 0;
+        let frameTimes = [];
+        
+        function updateFPS() {
+            frameCount++;
+            const now = performance.now();
+            
+            // Calculate frame time
+            if(frameTimes.length > 0) {
+                const frameTime = now - frameTimes[frameTimes.length - 1];
+                document.getElementById('perf-frame').textContent = frameTime.toFixed(1) + ' ms';
+            }
+            frameTimes.push(now);
+            if(frameTimes.length > 60) frameTimes.shift();
+            
+            // Calculate FPS every second
+            if(now - lastFpsTime >= 1000) {
+                currentFps = Math.round(frameCount * 1000 / (now - lastFpsTime));
+                frameCount = 0;
+                lastFpsTime = now;
+                
+                // Update displays
+                fpsDisplay.textContent = currentFps + ' FPS';
+                document.getElementById('perf-fps').textContent = currentFps;
+                
+                // Color code FPS
+                fpsDisplay.classList.remove('warn', 'bad');
+                const fpsClass = currentFps >= 30 ? 'good' : (currentFps >= 20 ? 'warn' : 'bad');
+                document.getElementById('perf-fps').className = 'value ' + fpsClass;
+                if(currentFps < 30) fpsDisplay.classList.add(currentFps >= 20 ? 'warn' : 'bad');
+                
+                // CPU load estimation based on FPS
+                const cpuLoad = Math.min(100, Math.max(0, (60 - currentFps) * 3));
+                document.getElementById('cpu-bar').style.width = cpuLoad + '%';
+            }
+            
+            requestAnimationFrame(updateFPS);
+        }
+        updateFPS();
+        
+        // === MEMORY INFO ===
+        function updateMemory() {
+            if(performance.memory) {
+                const heapMB = Math.round(performance.memory.usedJSHeapSize / 1048576);
+                document.getElementById('perf-heap').textContent = heapMB + ' MB';
+            }
+            
+            if(navigator.deviceMemory) {
+                document.getElementById('dev-memory').textContent = navigator.deviceMemory + ' GB';
+            }
+        }
+        setInterval(updateMemory, 2000);
+        updateMemory();
+        
+        // === DEVICE INFO ===
+        document.getElementById('dev-screen').textContent = 
+            `${screen.width}x${screen.height}`;
+        document.getElementById('dev-dpr').textContent = 
+            window.devicePixelRatio.toFixed(1);
+        
+        // Battery
+        if('getBattery' in navigator) {
+            navigator.getBattery().then(battery => {
+                const update = () => {
+                    const level = Math.round(battery.level * 100);
+                    document.getElementById('dev-battery').textContent = level + '%';
+                    document.getElementById('val-pwr').textContent = level + '%';
+                };
+                update();
+                battery.addEventListener('levelchange', update);
+            });
+        }
+        
+        // === AI MODEL ===
+        let aiModel = null;
+        let lastPredictions = [];
+        
+        // Check TensorFlow
+        if(typeof tf !== 'undefined') {
+            document.getElementById('ai-tf').innerHTML = 
+                '<span class="status-indicator active"></span> Ready';
+        } else {
+            document.getElementById('ai-tf').innerHTML = 
+                '<span class="status-indicator error"></span> Failed';
+        }
+        
+        // Load COCO-SSD
+        if(typeof cocoSsd !== 'undefined') {
+            const loadStart = performance.now();
+            cocoSsd.load().then(model => {
+                aiModel = model;
+                const loadTime = Math.round(performance.now() - loadStart);
+                document.getElementById('ai-model').innerHTML = 
+                    `<span class="status-indicator active"></span> Loaded (${loadTime}ms)`;
+                L.log('DIAGNOSTICS', 'AI_LOADED', { loadTime });
+                startAIScan();
+            }).catch(e => {
+                document.getElementById('ai-model').innerHTML = 
+                    '<span class="status-indicator error"></span> Failed';
+                L.log('DIAGNOSTICS', 'AI_ERROR', { error: e.message });
+            });
+        }
+        
+        // === AI SCANNING ===
+        function startAIScan() {
+            const video = document.querySelector('video');
+            
+            function scan() {
+                if(video && aiModel && video.readyState === 4) {
+                    const detectStart = performance.now();
+                    
+                    aiModel.detect(video).then(predictions => {
+                        const detectTime = Math.round(performance.now() - detectStart);
+                        document.getElementById('ai-detect-time').textContent = detectTime + ' ms';
+                        
+                        lastPredictions = predictions.filter(p => p.score >= 0.35);
+                        document.getElementById('ai-objects').textContent = lastPredictions.length;
+                        
+                        // Update AI list
+                        updateAIList();
+                        
+                        // Update rangefinder
+                        updateRangefinder();
+                        
+                    }).catch(() => {});
+                }
+                
+                setTimeout(scan, 300); // Faster scan for diagnostics
+            }
+            
+            scan();
+        }
+        
+        function updateAIList() {
+            if(!aiObjectList) return;
+            
+            if(lastPredictions.length === 0) {
+                aiObjectList.innerHTML = '<div class="ai-item scanning">SCANNING...</div>';
+                return;
+            }
+            
+            let html = '';
+            for(let pred of lastPredictions) {
+                const conf = Math.round(pred.score * 100);
+                html += `<div class="ai-item">
+                    <span>${pred.class.toUpperCase()}</span>
+                    <span class="conf">${conf}%</span>
+                </div>`;
+            }
+            aiObjectList.innerHTML = html;
+        }
+        
+        function updateRangefinder() {
+            const video = document.querySelector('video');
+            if(!video || lastPredictions.length === 0) {
+                if(rangeValueEl) rangeValueEl.textContent = '--.-';
+                if(targetNameEl) targetNameEl.textContent = 'NO TARGET';
+                return;
+            }
+            
+            // Find object closest to center
+            const cx = window.innerWidth / 2;
+            const cy = window.innerHeight / 2;
+            const scaleX = window.innerWidth / video.videoWidth;
+            const scaleY = window.innerHeight / video.videoHeight;
+            const scale = Math.max(scaleX, scaleY);
+            const offsetX = (window.innerWidth - video.videoWidth * scale) / 2;
+            const offsetY = (window.innerHeight - video.videoHeight * scale) / 2;
+            
+            let closest = null;
+            let closestDist = Infinity;
+            
+            for(let pred of lastPredictions) {
+                const x = pred.bbox[0] * scale + offsetX + (pred.bbox[2] * scale / 2);
+                const y = pred.bbox[1] * scale + offsetY + (pred.bbox[3] * scale / 2);
+                const dist = Math.sqrt(Math.pow(cx - x, 2) + Math.pow(cy - y, 2));
+                
+                if(dist < closestDist && dist < 200) {
+                    closestDist = dist;
+                    closest = pred;
+                }
+            }
+            
+            if(closest) {
+                const heightPercent = (closest.bbox[3] * scale) / window.innerHeight;
+                const distance = (1.5 / heightPercent).toFixed(1);
+                
+                if(rangeValueEl) rangeValueEl.textContent = distance;
+                if(targetNameEl) {
+                    targetNameEl.textContent = closest.class.toUpperCase();
+                    targetNameEl.style.color = '#00ffff';
+                }
+            } else {
+                if(rangeValueEl) rangeValueEl.textContent = '--.-';
+                if(targetNameEl) targetNameEl.textContent = 'NO TARGET';
+            }
+        }
+        
+        // === CAMERA STATUS ===
+        function checkCamera() {
+            const video = document.querySelector('video');
+            if(video && video.readyState === 4) {
+                document.getElementById('cam-status').innerHTML = 
+                    '<span class="status-indicator active"></span> Active';
+                document.getElementById('cam-res').textContent = 
+                    `${video.videoWidth}x${video.videoHeight}`;
+                
+                // Estimate camera FPS
+                let lastTime = 0;
+                let camFrames = 0;
+                
+                video.requestVideoFrameCallback(function cb(now) {
+                    camFrames++;
+                    if(now - lastTime >= 1000) {
+                        document.getElementById('cam-fps').textContent = camFrames + ' fps';
+                        camFrames = 0;
+                        lastTime = now;
+                    }
+                    video.requestVideoFrameCallback(cb);
+                });
+            } else {
+                setTimeout(checkCamera, 500);
+            }
+        }
+        checkCamera();
+        
+        // === SENSORS ===
+        // Compass
+        if('DeviceOrientationEvent' in window) {
+            window.addEventListener('deviceorientation', (e) => {
+                if(e.alpha !== null) {
+                    document.getElementById('sens-compass').innerHTML = 
+                        `<span class="status-indicator active"></span> ${Math.round(e.alpha)}°`;
+                    if(headingEl) headingEl.textContent = Math.round(e.alpha);
+                }
+            });
+            
+            // Request permission on iOS
+            if(typeof DeviceOrientationEvent.requestPermission === 'function') {
+                document.body.addEventListener('click', () => {
+                    DeviceOrientationEvent.requestPermission();
+                }, { once: true });
+            }
+        }
+        
+        // Accelerometer
+        if('DeviceMotionEvent' in window) {
+            window.addEventListener('devicemotion', (e) => {
+                if(e.accelerationIncludingGravity) {
+                    const g = e.accelerationIncludingGravity;
+                    const total = Math.sqrt(g.x*g.x + g.y*g.y + g.z*g.z) / 9.81;
+                    document.getElementById('sens-accel').innerHTML = 
+                        `<span class="status-indicator active"></span> ${total.toFixed(2)}G`;
+                    document.getElementById('val-g').textContent = total.toFixed(1);
+                }
+                
+                if(e.rotationRate) {
+                    document.getElementById('sens-gyro').innerHTML = 
+                        '<span class="status-indicator active"></span> Active';
+                }
+            });
+        }
+        
+        // Light sensor
+        if('AmbientLightSensor' in window) {
+            try {
+                const light = new AmbientLightSensor();
+                light.addEventListener('reading', () => {
+                    document.getElementById('sens-light').innerHTML = 
+                        `<span class="status-indicator active"></span> ${Math.round(light.illuminance)} lux`;
+                    document.getElementById('val-lux').textContent = Math.round(light.illuminance);
+                });
+                light.start();
+            } catch(e) {}
+        }
+        
+        // === CALIBRATION STATUS ===
+        const roomData = localStorage.getItem('iron_ar_room_data');
+        if(roomData) {
+            try {
+                const data = JSON.parse(roomData);
+                if(data.calibrated) {
+                    document.getElementById('cal-status').innerHTML = 
+                        '<span class="status-indicator active"></span> Yes';
+                    document.getElementById('cal-dist').textContent = 
+                        data.avgDistance.toFixed(1) + ' m';
+                    document.getElementById('cal-size').textContent = data.roomSize;
+                }
+            } catch(e) {}
+        }
+        
+        // === VOICE VISUALIZER ===
+        navigator.mediaDevices.getUserMedia({ audio: true }).then(stream => {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const src = ctx.createMediaStreamSource(stream);
+            const analyser = ctx.createAnalyser();
+            analyser.fftSize = 32;
+            src.connect(analyser);
+            const data = new Uint8Array(analyser.frequencyBinCount);
+            
+            function updateVoice() {
+                requestAnimationFrame(updateVoice);
+                analyser.getByteFrequencyData(data);
+                
+                for(let i = 0; i < voiceBars.length && i < data.length; i++) {
+                    const h = Math.max(3, (data[i] / 255) * 25);
+                    voiceBars[i].style.height = h + 'px';
+                }
+            }
+            updateVoice();
+        }).catch(() => {});
+        
+        // === TIME UPDATE ===
+        setInterval(() => {
+            document.getElementById('diag-time').textContent = 
+                new Date().toLocaleTimeString('he-IL');
+        }, 1000);
+        
+        L.log('DIAGNOSTICS', 'READY', {});
+    </script>
+</body>
+</html>
