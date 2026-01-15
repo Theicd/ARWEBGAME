@@ -623,3 +623,148 @@ a-scene {
     color: #000;
     transform: scale(0.95);
 }
+
+/* ========================================
+   RESPONSIVE - Portrait & Landscape
+   ======================================== */
+
+/* Portrait Mode - Vertical */
+@media (orientation: portrait) {
+    .top-hud {
+        height: 50px;
+    }
+    
+    .compass-row {
+        gap: 15px;
+    }
+    
+    .heading-box {
+        font-size: 16px;
+        padding: 2px 10px;
+    }
+    
+    .center-hud {
+        flex-direction: column;
+    }
+    
+    .rangefinder {
+        margin-top: 20px;
+    }
+    
+    .bottom-hud {
+        flex-direction: column;
+        gap: 10px;
+        padding: 10px;
+        height: auto;
+    }
+    
+    .hud-panel {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-around;
+    }
+    
+    .ai-detection-box {
+        top: auto;
+        bottom: 150px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+        width: auto;
+    }
+}
+
+/* Landscape Mode - Horizontal */
+@media (orientation: landscape) {
+    .top-hud {
+        height: 45px;
+    }
+    
+    .bottom-hud {
+        height: 60px;
+    }
+    
+    .reticle-box {
+        width: 150px;
+        height: 150px;
+    }
+    
+    .ai-detection-box {
+        max-height: 40vh;
+    }
+}
+
+/* Small phones */
+@media (max-width: 380px) {
+    .compass-row {
+        gap: 10px;
+    }
+    
+    .sensor-mini {
+        font-size: 9px;
+    }
+    
+    .heading-box {
+        font-size: 14px;
+    }
+    
+    .data-block .val {
+        font-size: 12px;
+    }
+    
+    .v-bar {
+        width: 3px;
+    }
+}
+
+/* Large phones / Tablets */
+@media (min-width: 768px) {
+    .reticle-box {
+        width: 200px;
+        height: 200px;
+    }
+    
+    .heading-box {
+        font-size: 22px;
+        padding: 4px 16px;
+    }
+    
+    .range-value {
+        font-size: 40px;
+    }
+    
+    .bottom-hud {
+        height: 80px;
+    }
+    
+    .data-block .val {
+        font-size: 18px;
+    }
+}
+
+/* Safe areas for notched phones */
+@supports (padding: env(safe-area-inset-top)) {
+    .top-hud {
+        padding-top: env(safe-area-inset-top, 5px);
+    }
+    
+    .bottom-hud {
+        padding-bottom: env(safe-area-inset-bottom, 10px);
+    }
+    
+    #hud {
+        padding-left: env(safe-area-inset-left);
+        padding-right: env(safe-area-inset-right);
+    }
+}
+
+/* PWA Standalone mode */
+@media (display-mode: standalone) {
+    #install-modal {
+        display: none !important;
+    }
+    
+    #hud-install {
+        display: none !important;
+    }
+}

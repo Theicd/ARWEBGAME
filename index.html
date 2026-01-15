@@ -1,174 +1,174 @@
 <!DOCTYPE html>
-<html lang="he">
+<html lang="he" dir="rtl">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <meta name="theme-color" content="#000000">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
+    <meta name="theme-color" content="#00d4ff">
+    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
+    <meta name="description" content="Iron Man AR - Tactical HUD System with sensors and combat mode">
+    <meta name="mobile-web-app-capable" content="yes">
+    
+    <!-- iOS Meta Tags -->
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="IronAR">
+    <link rel="apple-touch-icon" href="icons/icon.svg">
+    <link rel="apple-touch-icon" sizes="152x152" href="icons/icon.svg">
+    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon.svg">
+    <link rel="apple-touch-icon" sizes="167x167" href="icons/icon.svg">
+    
+    <!-- Android/Chrome -->
+    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="192x192" href="icons/icon.svg">
+    <link rel="icon" type="image/png" sizes="512x512" href="icons/icon.svg">
+    
+    <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
-    <title>Iron Man AR Mk.V</title>
+    
+    <!-- Microsoft -->
+    <meta name="msapplication-TileColor" content="#000000">
+    <meta name="msapplication-config" content="browserconfig.xml">
+    
+    <title>Iron Man AR · Tactical HUD</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="menu.css">
+</head>
+<body>
+    <!-- Background Animation -->
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+    
+    <!-- Main Menu -->
+    <main class="menu-container">
+        <!-- Logo Section -->
+        <header class="menu-header">
+            <div class="logo-box">
+                <div class="logo-ring"></div>
+                <div class="logo-ring logo-ring--inner"></div>
+                <i class="fa-solid fa-helmet-safety logo-icon"></i>
+            </div>
+            <h1 class="menu-title">TACTICAL HUD</h1>
+            <p class="menu-subtitle">Iron Man AR System · Mk.IX</p>
+            <div class="menu-version">v2.0.81</div>
+        </header>
+
+        <!-- Menu Buttons -->
+        <nav class="menu-nav">
+            <!-- Play Game Button -->
+            <a href="game.html" class="menu-btn menu-btn--primary">
+                <div class="menu-btn__icon">
+                    <i class="fa-solid fa-play"></i>
+                </div>
+                <div class="menu-btn__content">
+                    <span class="menu-btn__title">הפעל משחק</span>
+                    <span class="menu-btn__desc">כניסה למצב AR קרבי</span>
+                </div>
+                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
+            </a>
+
+            <!-- Sensors Button -->
+            <a href="sensors.html" class="menu-btn">
+                <div class="menu-btn__icon">
+                    <i class="fa-solid fa-microchip"></i>
+                </div>
+                <div class="menu-btn__content">
+                    <span class="menu-btn__title">חיישנים</span>
+                    <span class="menu-btn__desc">סריקת חומרה ואביזרים</span>
+                </div>
+                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
+            </a>
+
+            <!-- Functions Button -->
+            <a href="functions.html" class="menu-btn">
+                <div class="menu-btn__icon">
+                    <i class="fa-solid fa-diagram-project"></i>
+                </div>
+                <div class="menu-btn__content">
+                    <span class="menu-btn__title">פונקציות</span>
+                    <span class="menu-btn__desc">שילוב חיישנים ליצירת נתונים</span>
+                </div>
+                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
+            </a>
+
+            <!-- Install Button -->
+            <button class="menu-btn menu-btn--install" id="installBtn">
+                <div class="menu-btn__icon">
+                    <i class="fa-solid fa-download"></i>
+                </div>
+                <div class="menu-btn__content">
+                    <span class="menu-btn__title">התקן אפליקציה</span>
+                    <span class="menu-btn__desc">הוסף למסך הבית</span>
+                </div>
+                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
+            </button>
+        </nav>
+
+        <!-- Status Bar -->
+        <footer class="menu-footer">
+            <div class="status-item">
+                <i class="fa-solid fa-signal"></i>
+                <span>מוכן</span>
+            </div>
+            <div class="status-item">
+                <i class="fa-solid fa-battery-full"></i>
+                <span id="batteryLevel">--</span>
+            </div>
+            <div class="status-item">
+                <i class="fa-solid fa-clock"></i>
+                <span id="currentTime">--:--</span>
+            </div>
+        </footer>
+    </main>
+
     <script>
+        // Update time
+        function updateTime() {
+            const now = new Date();
+            document.getElementById('currentTime').textContent = 
+                now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
+        }
+        updateTime();
+        setInterval(updateTime, 1000);
+
+        // Battery status
+        if ('getBattery' in navigator) {
+            navigator.getBattery().then(battery => {
+                document.getElementById('batteryLevel').textContent = 
+                    Math.round(battery.level * 100) + '%';
+                battery.addEventListener('levelchange', () => {
+                    document.getElementById('batteryLevel').textContent = 
+                        Math.round(battery.level * 100) + '%';
+                });
+            });
+        }
+
+        // PWA Install
+        let deferredPrompt;
+        const installBtn = document.getElementById('installBtn');
+
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+            installBtn.classList.add('menu-btn--available');
+        });
+
+        installBtn.addEventListener('click', async () => {
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') {
+                    installBtn.querySelector('.menu-btn__desc').textContent = 'הותקן בהצלחה!';
+                }
+                deferredPrompt = null;
+            } else {
+                alert('האפליקציה כבר מותקנת או לא זמינה להתקנה');
+            }
+        });
+
+        // Service Worker
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.register('sw.js');
         }
     </script>
-    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
-    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aframe-extras@6.1.1/dist/aframe-extras.min.js"></script>
-    <!-- WebXR Hit Test Component -->
-    <script src="https://unpkg.com/aframe-hit-test-controls@2.0.0/dist/aframe-hit-test-controls.min.js"></script>
-    
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
-    <link rel="stylesheet" href="style_v9.css">
-</head>
-<body>
-    <!-- Install Modal -->
-    <div id="install-modal">
-        <div class="modal-content">
-            <div style="color:#00ffff; font-weight:bold; font-size:20px; margin-bottom:15px;">
-                ⚡ TACTICAL OS ⚡
-            </div>
-            <div style="color:#aaa; font-size:14px; margin-bottom:20px;">
-                התקן את הקסדה למסך הבית<br>לחוויה מלאה ללא דפדפן
-            </div>
-            <button id="modal-install" class="modal-btn">✓ התקן</button>
-            <button id="modal-close" class="modal-btn" style="border-color:#ff3300; color:#ff3300;">✕ ביטול</button>
-        </div>
-    </div>
-
-    <!-- HUD -->
-    <div id="hud">
-        <!-- TOP HUD BAR -->
-        <div class="top-hud">
-            <div class="compass-row">
-                <div class="sensor-mini">ALT <span class="val" id="val-alt">--</span>m</div>
-                <div class="heading-box" id="heading-num">000°</div>
-                <div class="sensor-mini">SPD <span class="val" id="val-spd">0</span></div>
-            </div>
-        </div>
-
-        <!-- CENTER: RETICLE + RANGEFINDER -->
-        <div class="center-hud">
-            <div class="reticle-box" id="reticle-box">
-                <div class="ring-outer"></div>
-                <div class="ring-middle"></div>
-                <div class="ring-inner"></div>
-                <div class="reticle-cross"></div>
-            </div>
-            <div class="rangefinder">
-                <div class="range-label">DISTANCE</div>
-                <div class="range-value" id="range-value">--.-</div>
-                <div class="range-label">METERS</div>
-                <div class="target-name" id="target-name">SCANNING...</div>
-            </div>
-        </div>
-
-        <!-- AI OBJECT DETECTION BOX - LEFT SIDE -->
-        <div class="ai-detection-box" id="ai-detection-box">
-            <div class="ai-header">
-                <span class="ai-icon">◎</span>
-                <span>AI SCAN</span>
-            </div>
-            <div class="ai-object-list" id="ai-object-list">
-                <div class="ai-item scanning">INITIALIZING...</div>
-            </div>
-        </div>
-
-        <!-- BOTTOM HUD BAR -->
-        <div class="bottom-hud">
-            <!-- Left Panel: System -->
-            <div class="hud-panel">
-                <div class="hud-row">
-                    <div class="data-block">
-                        <span class="lbl">PWR</span>
-                        <span class="val" id="val-pwr">100%</span>
-                    </div>
-                    <div class="data-block">
-                        <span class="lbl">G</span>
-                        <span class="val" id="val-g">1.0</span>
-                    </div>
-                </div>
-                <div class="motion-indicator">
-                    <div class="motion-dot" id="motion-dot"></div>
-                    <span id="motion-status">IDLE</span>
-                </div>
-            </div>
-
-            <!-- Center Panel: Voice + Radiation -->
-            <div class="hud-panel" style="align-items: center;">
-                <div class="voice-viz" id="voice-viz">
-                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
-                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
-                    <div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div><div class="v-bar"></div>
-                </div>
-                <div class="radiation-meter">
-                    <span class="lbl">RADIATION</span>
-                    <div class="rad-bar">
-                        <div class="rad-fill" id="rad-fill"></div>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right Panel: Environment -->
-            <div class="hud-panel" style="align-items: flex-end;">
-                <div class="hud-row">
-                    <div class="data-block">
-                        <span class="lbl">LUX</span>
-                        <span class="val" id="val-lux">--</span>
-                    </div>
-                    <div class="data-block">
-                        <span class="lbl">MAG</span>
-                        <span class="val" id="val-mag">--</span>
-                    </div>
-                </div>
-                <button id="hud-install" style="pointer-events: auto;">INSTALL</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- AR Scene - WebXR Mode -->
-    <a-scene 
-        renderer="alpha: true; antialias: true; colorManagement: true; logarithmicDepthBuffer: true;"
-        webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay, local-floor; overlayElement: #hud;" 
-        vr-mode-ui="enabled: false"
-        xr-mode-ui="enabled: false">
-        
-        <!-- Hit Test Reticle - shows where surfaces are detected -->
-        <a-entity id="ar-reticle" visible="false">
-            <a-ring rotation="-90 0 0" color="#00ffff" radius-inner="0.08" radius-outer="0.12"
-                    animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 3000; loop: true; easing: linear"></a-ring>
-            <a-ring rotation="-90 0 0" color="#00ffff" radius-inner="0.15" radius-outer="0.18" opacity="0.5"></a-ring>
-        </a-entity>
-
-        <!-- Container for spawned enemies -->
-        <a-entity id="enemy-container"></a-entity>
-
-        <!-- Camera -->
-        <a-entity id="camera-rig">
-            <a-entity camera look-controls="enabled: false"></a-entity>
-        </a-entity>
-    </a-scene>
-    
-    <!-- Enter AR Button -->
-    <button id="enter-ar-btn" style="
-        position: fixed;
-        bottom: 100px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: linear-gradient(135deg, #00aaff, #0066cc);
-        color: white;
-        border: 2px solid #00ffff;
-        padding: 15px 40px;
-        font-size: 18px;
-        font-weight: bold;
-        font-family: inherit;
-        letter-spacing: 2px;
-        cursor: pointer;
-        z-index: 100000;
-        box-shadow: 0 0 20px rgba(0,255,255,0.5);
-    ">▶ ENTER AR MODE</button>
-    <script src="game_logic_v10.js"></script>
 </body>
 </html>

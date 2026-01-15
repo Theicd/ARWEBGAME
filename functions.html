@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <title>פונקציות · Iron Man AR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="menu.css">
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            padding-top: calc(20px + env(safe-area-inset-top, 0px));
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50%;
+            color: var(--menu-accent);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+            text-decoration: none;
+        }
+        .back-btn:hover { background: rgba(0, 212, 255, 0.2); }
+        .page-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+
+        .functions-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+
+        .intro-box {
+            background: linear-gradient(135deg, rgba(0, 212, 255, 0.1) 0%, rgba(0, 100, 150, 0.1) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            margin-bottom: 24px;
+        }
+        .intro-box h2 {
+            font-size: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .intro-box h2 i {
+            color: var(--menu-accent);
+        }
+        .intro-box p {
+            font-size: 13px;
+            color: var(--menu-text-muted);
+            line-height: 1.6;
+        }
+
+        .function-card {
+            background: linear-gradient(135deg, rgba(10, 10, 26, 0.95) 0%, rgba(26, 26, 46, 0.95) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 16px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+        .function-card:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+            box-shadow: 0 4px 20px var(--menu-accent-glow);
+        }
+
+        .function-header {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 16px;
+            cursor: pointer;
+        }
+        .function-icon {
+            width: 50px;
+            height: 50px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            flex-shrink: 0;
+        }
+        .function-icon.radiation { background: linear-gradient(135deg, #ff6600 0%, #ff3300 100%); color: #fff; }
+        .function-icon.distance { background: linear-gradient(135deg, #00ff88 0%, #00aa55 100%); color: #fff; }
+        .function-icon.night { background: linear-gradient(135deg, #6600ff 0%, #3300aa 100%); color: #fff; }
+        .function-icon.motion { background: linear-gradient(135deg, #00aaff 0%, #0066cc 100%); color: #fff; }
+        .function-icon.hazard { background: linear-gradient(135deg, #ffaa00 0%, #ff6600 100%); color: #fff; }
+        .function-icon.compass { background: linear-gradient(135deg, #ff0066 0%, #aa0044 100%); color: #fff; }
+
+        .function-info { flex: 1; }
+        .function-name {
+            font-size: 16px;
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+        .function-output {
+            font-size: 12px;
+            color: var(--menu-accent);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .function-output i { font-size: 10px; }
+
+        .function-toggle {
+            color: var(--menu-text-muted);
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+        .function-card.open .function-toggle {
+            transform: rotate(180deg);
+        }
+
+        .function-body {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+        .function-card.open .function-body {
+            max-height: 400px;
+        }
+
+        .function-content {
+            padding: 0 16px 16px;
+            border-top: 1px solid rgba(0, 212, 255, 0.1);
+        }
+
+        .formula-box {
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 10px;
+            padding: 14px;
+            margin: 12px 0;
+        }
+        .formula-title {
+            font-size: 11px;
+            color: var(--menu-text-muted);
+            margin-bottom: 8px;
+            letter-spacing: 1px;
+        }
+        .formula-inputs, .formula-output {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+        .formula-chip {
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+        .formula-chip.input {
+            background: rgba(0, 212, 255, 0.15);
+            border: 1px solid rgba(0, 212, 255, 0.4);
+            color: var(--menu-accent);
+        }
+        .formula-chip.output {
+            background: rgba(0, 255, 136, 0.15);
+            border: 1px solid rgba(0, 255, 136, 0.4);
+            color: #00ff88;
+        }
+        .formula-arrow {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 8px 0;
+            color: var(--menu-text-muted);
+        }
+        .function-desc {
+            font-size: 13px;
+            color: var(--menu-text-muted);
+            line-height: 1.6;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <div class="menu-container" style="padding: 0;">
+        <header class="page-header">
+            <a href="index.html" class="back-btn">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            <h1 class="page-title">פונקציות</h1>
+        </header>
+
+        <div class="functions-container">
+            <div class="intro-box">
+                <h2><i class="fa-solid fa-wand-magic-sparkles"></i> שילוב חיישנים</h2>
+                <p>
+                    המערכת משלבת נתונים מחיישנים שונים של המכשיר ליצירת "חיישנים וירטואליים" שמספקים מידע מתקדם שלא קיים בחומרה המקורית.
+                </p>
+            </div>
+
+            <!-- Radiation Meter -->
+            <div class="function-card">
+                <div class="function-header">
+                    <div class="function-icon radiation"><i class="fa-solid fa-radiation"></i></div>
+                    <div class="function-info">
+                        <div class="function-name">מד קרינה</div>
+                        <div class="function-output"><i class="fa-solid fa-arrow-left"></i> רמת קרינה סביבתית</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down function-toggle"></i>
+                </div>
+                <div class="function-body">
+                    <div class="function-content">
+                        <div class="formula-box">
+                            <div class="formula-title">קלט חיישנים</div>
+                            <div class="formula-inputs">
+                                <span class="formula-chip input"><i class="fa-solid fa-sun"></i> חיישן אור</span>
+                                <span class="formula-chip input"><i class="fa-solid fa-magnet"></i> מגנטומטר</span>
+                            </div>
+                            <div class="formula-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="formula-output">
+                                <span class="formula-chip output"><i class="fa-solid fa-radiation"></i> מד קרינה (0-100%)</span>
+                            </div>
+                        </div>
+                        <p class="function-desc">
+                            משקלל את עוצמת האור והשדה המגנטי ליצירת מדד קרינה סימולטיבי. שינויים חריגים בשדה המגנטי או רמות אור קיצוניות מעלים את הקריאה.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Distance Meter -->
+            <div class="function-card">
+                <div class="function-header">
+                    <div class="function-icon distance"><i class="fa-solid fa-ruler"></i></div>
+                    <div class="function-info">
+                        <div class="function-name">מד מרחק</div>
+                        <div class="function-output"><i class="fa-solid fa-arrow-left"></i> מרחק ממטרה במטרים</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down function-toggle"></i>
+                </div>
+                <div class="function-body">
+                    <div class="function-content">
+                        <div class="formula-box">
+                            <div class="formula-title">קלט חיישנים</div>
+                            <div class="formula-inputs">
+                                <span class="formula-chip input"><i class="fa-solid fa-camera"></i> מצלמה</span>
+                                <span class="formula-chip input"><i class="fa-solid fa-brain"></i> AI זיהוי</span>
+                            </div>
+                            <div class="formula-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="formula-output">
+                                <span class="formula-chip output"><i class="fa-solid fa-ruler"></i> מרחק (מטרים)</span>
+                            </div>
+                        </div>
+                        <p class="function-desc">
+                            משתמש בזיהוי אובייקטים (TensorFlow) כדי לזהות מטרות ולהעריך מרחק לפי גודל האובייקט המזוהה במסגרת. ככל שהאובייקט גדול יותר, המרחק קטן יותר.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Night Vision -->
+            <div class="function-card">
+                <div class="function-header">
+                    <div class="function-icon night"><i class="fa-solid fa-moon"></i></div>
+                    <div class="function-info">
+                        <div class="function-name">ראיית לילה</div>
+                        <div class="function-output"><i class="fa-solid fa-arrow-left"></i> מצב תצוגה אדפטיבי</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down function-toggle"></i>
+                </div>
+                <div class="function-body">
+                    <div class="function-content">
+                        <div class="formula-box">
+                            <div class="formula-title">קלט חיישנים</div>
+                            <div class="formula-inputs">
+                                <span class="formula-chip input"><i class="fa-solid fa-sun"></i> חיישן אור</span>
+                            </div>
+                            <div class="formula-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="formula-output">
+                                <span class="formula-chip output"><i class="fa-solid fa-moon"></i> מצב לילה ON/OFF</span>
+                            </div>
+                        </div>
+                        <p class="function-desc">
+                            כשחיישן האור מזהה תאורה נמוכה (מתחת ל-50 lux), המערכת עוברת אוטומטית למצב ראיית לילה עם פילטר ירוק והגברת ניגודיות.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Motion Detection -->
+            <div class="function-card">
+                <div class="function-header">
+                    <div class="function-icon motion"><i class="fa-solid fa-person-walking"></i></div>
+                    <div class="function-info">
+                        <div class="function-name">זיהוי תנועה</div>
+                        <div class="function-output"><i class="fa-solid fa-arrow-left"></i> מצב תנועה (הליכה/עמידה)</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down function-toggle"></i>
+                </div>
+                <div class="function-body">
+                    <div class="function-content">
+                        <div class="formula-box">
+                            <div class="formula-title">קלט חיישנים</div>
+                            <div class="formula-inputs">
+                                <span class="formula-chip input"><i class="fa-solid fa-arrows-up-down-left-right"></i> מד תאוצה</span>
+                            </div>
+                            <div class="formula-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="formula-output">
+                                <span class="formula-chip output"><i class="fa-solid fa-person-walking"></i> MOVING / IDLE</span>
+                            </div>
+                        </div>
+                        <p class="function-desc">
+                            מנתח את השינויים בתאוצה לזיהוי האם המשתמש בתנועה או עומד במקום. לא דורש GPS ועובד בתוך מבנים.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hazard Meter -->
+            <div class="function-card">
+                <div class="function-header">
+                    <div class="function-icon hazard"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                    <div class="function-info">
+                        <div class="function-name">מדד סיכון</div>
+                        <div class="function-output"><i class="fa-solid fa-arrow-left"></i> רמת סכנה סביבתית</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down function-toggle"></i>
+                </div>
+                <div class="function-body">
+                    <div class="function-content">
+                        <div class="formula-box">
+                            <div class="formula-title">קלט חיישנים</div>
+                            <div class="formula-inputs">
+                                <span class="formula-chip input"><i class="fa-solid fa-sun"></i> חיישן אור</span>
+                                <span class="formula-chip input"><i class="fa-solid fa-magnet"></i> מגנטומטר</span>
+                                <span class="formula-chip input"><i class="fa-solid fa-arrows-up-down-left-right"></i> מד תאוצה</span>
+                            </div>
+                            <div class="formula-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="formula-output">
+                                <span class="formula-chip output"><i class="fa-solid fa-triangle-exclamation"></i> HAZARD (LOW/MED/HIGH)</span>
+                            </div>
+                        </div>
+                        <p class="function-desc">
+                            משקלל מספר פרמטרים סביבתיים (אור חזק מדי, שדה מגנטי חריג, תאוצה גבוהה) ליצירת מדד סיכון כולל.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Compass -->
+            <div class="function-card">
+                <div class="function-header">
+                    <div class="function-icon compass"><i class="fa-solid fa-compass"></i></div>
+                    <div class="function-info">
+                        <div class="function-name">מצפן דיגיטלי</div>
+                        <div class="function-output"><i class="fa-solid fa-arrow-left"></i> כיוון במעלות</div>
+                    </div>
+                    <i class="fa-solid fa-chevron-down function-toggle"></i>
+                </div>
+                <div class="function-body">
+                    <div class="function-content">
+                        <div class="formula-box">
+                            <div class="formula-title">קלט חיישנים</div>
+                            <div class="formula-inputs">
+                                <span class="formula-chip input"><i class="fa-solid fa-compass"></i> מגנטומטר</span>
+                                <span class="formula-chip input"><i class="fa-solid fa-rotate"></i> גיירוסקופ</span>
+                            </div>
+                            <div class="formula-arrow"><i class="fa-solid fa-arrow-down"></i></div>
+                            <div class="formula-output">
+                                <span class="formula-chip output"><i class="fa-solid fa-location-arrow"></i> כיוון 0°-360°</span>
+                            </div>
+                        </div>
+                        <p class="function-desc">
+                            משלב נתוני מגנטומטר וגיירוסקופ לחישוב כיוון מדויק. הגיירוסקופ מייצב את הקריאה ומפצה על תנועות מהירות.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // Toggle function cards
+        document.querySelectorAll('.function-header').forEach(header => {
+            header.addEventListener('click', () => {
+                const card = header.closest('.function-card');
+                card.classList.toggle('open');
+            });
+        });
+    </script>
+</body>
+</html>

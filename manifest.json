@@ -1,21 +1,100 @@
 {
-  "name": "Iron Man AR Mk.V",
+  "name": "Iron Man AR - Tactical HUD",
   "short_name": "IronAR",
+  "description": "AR Combat System with Tactical HUD",
   "start_url": "./index.html",
-  "display": "fullscreen",
+  "scope": "./",
+  "id": "iron-ar-tactical-hud",
+  "display": "standalone",
+  "display_override": ["standalone", "fullscreen"],
   "background_color": "#000000",
-  "theme_color": "#000000",
-  "orientation": "landscape",
+  "theme_color": "#00d4ff",
+  "orientation": "any",
+  "dir": "rtl",
+  "lang": "he",
+  "categories": ["games", "entertainment"],
   "icons": [
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/599/599502.png",
-      "sizes": "192x192",
-      "type": "image/png"
+      "src": "icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any"
     },
     {
-      "src": "https://cdn-icons-png.flaticon.com/512/599/599502.png",
+      "src": "icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-384.png",
+      "sizes": "384x384",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
-  ]
+  ],
+  "screenshots": [
+    {
+      "src": "icons/screenshot-wide.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide",
+      "label": "Tactical HUD - Landscape Mode"
+    },
+    {
+      "src": "icons/screenshot-narrow.png",
+      "sizes": "720x1280",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "Tactical HUD - Portrait Mode"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "הפעל משחק",
+      "short_name": "Play",
+      "description": "כניסה ישירה למשחק",
+      "url": "./game.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "חיישנים",
+      "short_name": "Sensors",
+      "description": "סריקת חיישנים",
+      "url": "./sensors.html",
+      "icons": [{ "src": "icons/icon-96.png", "sizes": "96x96" }]
+    }
+  ],
+  "related_applications": [],
+  "prefer_related_applications": false
 }

@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <title>חיישנים · Iron Man AR</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+    <link rel="stylesheet" href="menu.css">
+    <style>
+        .page-header {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding: 20px;
+            padding-top: calc(20px + env(safe-area-inset-top, 0px));
+            border-bottom: 1px solid rgba(0, 212, 255, 0.2);
+        }
+        .back-btn {
+            width: 44px;
+            height: 44px;
+            background: rgba(0, 212, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 50%;
+            color: var(--menu-accent);
+            font-size: 18px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.3s ease;
+        }
+        .back-btn:hover { background: rgba(0, 212, 255, 0.2); }
+        .page-title {
+            font-size: 22px;
+            font-weight: 800;
+            letter-spacing: 2px;
+        }
+        .scan-btn {
+            margin-right: auto;
+            padding: 10px 20px;
+            background: linear-gradient(135deg, var(--menu-accent), #0088aa);
+            border: none;
+            border-radius: 25px;
+            color: #000;
+            font-weight: 700;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        .scan-btn:hover { transform: scale(1.05); box-shadow: 0 0 20px var(--menu-accent-glow); }
+        .scan-btn.scanning i { animation: spin 1s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .sensors-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+        }
+        .sensor-category {
+            margin-bottom: 24px;
+        }
+        .category-title {
+            font-size: 12px;
+            color: var(--menu-text-muted);
+            letter-spacing: 2px;
+            margin-bottom: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .category-title::after {
+            content: '';
+            flex: 1;
+            height: 1px;
+            background: rgba(0, 212, 255, 0.2);
+        }
+        .sensor-card {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            padding: 14px 16px;
+            background: linear-gradient(135deg, rgba(10, 10, 26, 0.9) 0%, rgba(26, 26, 46, 0.9) 100%);
+            border: 1px solid rgba(0, 212, 255, 0.15);
+            border-radius: 12px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+        }
+        .sensor-card:hover {
+            border-color: rgba(0, 212, 255, 0.4);
+            transform: translateX(-5px);
+        }
+        .sensor-icon {
+            width: 42px;
+            height: 42px;
+            background: rgba(0, 212, 255, 0.1);
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            flex-shrink: 0;
+        }
+        .sensor-info { flex: 1; }
+        .sensor-name {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 3px;
+        }
+        .sensor-value {
+            font-size: 12px;
+            color: var(--menu-text-muted);
+        }
+        .sensor-status {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #444;
+            box-shadow: 0 0 10px transparent;
+            transition: all 0.3s ease;
+        }
+        .sensor-status.active {
+            background: #00ff88;
+            box-shadow: 0 0 10px rgba(0, 255, 136, 0.5);
+        }
+        .sensor-status.error {
+            background: #ff3300;
+            box-shadow: 0 0 10px rgba(255, 51, 0, 0.5);
+        }
+        .sensor-status.warning {
+            background: #ffaa00;
+            box-shadow: 0 0 10px rgba(255, 170, 0, 0.5);
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-grid"></div>
+    <div class="bg-glow"></div>
+
+    <div class="menu-container" style="padding: 0;">
+        <header class="page-header">
+            <a href="index.html" class="back-btn">
+                <i class="fa-solid fa-chevron-right"></i>
+            </a>
+            <h1 class="page-title">חיישנים</h1>
+            <button class="scan-btn" id="scanBtn">
+                <i class="fa-solid fa-radar"></i>
+                <span>סרוק</span>
+            </button>
+        </header>
+
+        <div class="sensors-container" id="sensorsContainer">
+            <!-- Motion Sensors -->
+            <div class="sensor-category">
+                <div class="category-title">חיישני תנועה</div>
+                <div class="sensor-card" id="accelerometer">
+                    <div class="sensor-icon"><i class="fa-solid fa-arrows-up-down-left-right"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">מד תאוצה (Accelerometer)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="gyroscope">
+                    <div class="sensor-icon"><i class="fa-solid fa-rotate"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">גיירוסקופ (Gyroscope)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="magnetometer">
+                    <div class="sensor-icon"><i class="fa-solid fa-compass"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">מגנטומטר (Compass)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="orientation">
+                    <div class="sensor-icon"><i class="fa-solid fa-mobile-screen"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">חיישן כיוון (Orientation)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+            </div>
+
+            <!-- Environment Sensors -->
+            <div class="sensor-category">
+                <div class="category-title">חיישני סביבה</div>
+                <div class="sensor-card" id="ambientlight">
+                    <div class="sensor-icon"><i class="fa-solid fa-sun"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">חיישן אור (Light)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="proximity">
+                    <div class="sensor-icon"><i class="fa-solid fa-hand"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">חיישן קרבה (Proximity)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+            </div>
+
+            <!-- Media Devices -->
+            <div class="sensor-category">
+                <div class="category-title">מכשירי מדיה</div>
+                <div class="sensor-card" id="camera">
+                    <div class="sensor-icon"><i class="fa-solid fa-camera"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">מצלמה (Camera)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="microphone">
+                    <div class="sensor-icon"><i class="fa-solid fa-microphone"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">מיקרופון (Microphone)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+            </div>
+
+            <!-- Connectivity -->
+            <div class="sensor-category">
+                <div class="category-title">קישוריות</div>
+                <div class="sensor-card" id="bluetooth">
+                    <div class="sensor-icon"><i class="fa-brands fa-bluetooth-b"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">בלוטות' (Bluetooth)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="wifi">
+                    <div class="sensor-icon"><i class="fa-solid fa-wifi"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">רשת אלחוטית (WiFi)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="geolocation">
+                    <div class="sensor-icon"><i class="fa-solid fa-location-dot"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">מיקום (GPS)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="nfc">
+                    <div class="sensor-icon"><i class="fa-solid fa-nfc-symbol"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">NFC</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+            </div>
+
+            <!-- Device Info -->
+            <div class="sensor-category">
+                <div class="category-title">מידע מכשיר</div>
+                <div class="sensor-card" id="battery">
+                    <div class="sensor-icon"><i class="fa-solid fa-battery-three-quarters"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">סוללה (Battery)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="vibration">
+                    <div class="sensor-icon"><i class="fa-solid fa-bell"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">רטט (Vibration)</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+                <div class="sensor-card" id="webxr">
+                    <div class="sensor-icon"><i class="fa-solid fa-vr-cardboard"></i></div>
+                    <div class="sensor-info">
+                        <div class="sensor-name">WebXR / AR</div>
+                        <div class="sensor-value">בודק...</div>
+                    </div>
+                    <div class="sensor-status"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function setStatus(id, status, value) {
+            const card = document.getElementById(id);
+            if (!card) return;
+            const statusEl = card.querySelector('.sensor-status');
+            const valueEl = card.querySelector('.sensor-value');
+            statusEl.className = 'sensor-status ' + status;
+            valueEl.textContent = value;
+        }
+
+        async function scanSensors() {
+            const scanBtn = document.getElementById('scanBtn');
+            scanBtn.classList.add('scanning');
+            scanBtn.querySelector('span').textContent = 'סורק...';
+
+            // Accelerometer
+            try {
+                if ('Accelerometer' in window) {
+                    const acc = new Accelerometer({ frequency: 10 });
+                    acc.addEventListener('reading', () => {
+                        setStatus('accelerometer', 'active', `X:${acc.x.toFixed(1)} Y:${acc.y.toFixed(1)} Z:${acc.z.toFixed(1)}`);
+                        acc.stop();
+                    });
+                    acc.addEventListener('error', () => setStatus('accelerometer', 'error', 'אין הרשאה'));
+                    acc.start();
+                } else if (window.DeviceMotionEvent) {
+                    setStatus('accelerometer', 'active', 'זמין (DeviceMotion)');
+                } else {
+                    setStatus('accelerometer', 'error', 'לא נתמך');
+                }
+            } catch (e) { setStatus('accelerometer', 'warning', 'נדרשת הרשאה'); }
+
+            // Gyroscope
+            try {
+                if ('Gyroscope' in window) {
+                    const gyro = new Gyroscope({ frequency: 10 });
+                    gyro.addEventListener('reading', () => {
+                        setStatus('gyroscope', 'active', `α:${gyro.x.toFixed(1)} β:${gyro.y.toFixed(1)} γ:${gyro.z.toFixed(1)}`);
+                        gyro.stop();
+                    });
+                    gyro.addEventListener('error', () => setStatus('gyroscope', 'error', 'אין הרשאה'));
+                    gyro.start();
+                } else if (window.DeviceOrientationEvent) {
+                    setStatus('gyroscope', 'active', 'זמין (DeviceOrientation)');
+                } else {
+                    setStatus('gyroscope', 'error', 'לא נתמך');
+                }
+            } catch (e) { setStatus('gyroscope', 'warning', 'נדרשת הרשאה'); }
+
+            // Magnetometer
+            try {
+                if ('Magnetometer' in window) {
+                    const mag = new Magnetometer({ frequency: 10 });
+                    mag.addEventListener('reading', () => {
+                        setStatus('magnetometer', 'active', `${Math.sqrt(mag.x**2 + mag.y**2 + mag.z**2).toFixed(0)} µT`);
+                        mag.stop();
+                    });
+                    mag.addEventListener('error', () => setStatus('magnetometer', 'error', 'אין הרשאה'));
+                    mag.start();
+                } else {
+                    setStatus('magnetometer', 'warning', 'לא נתמך בדפדפן');
+                }
+            } catch (e) { setStatus('magnetometer', 'warning', 'נדרשת הרשאה'); }
+
+            // Orientation
+            if (window.DeviceOrientationEvent) {
+                window.addEventListener('deviceorientation', (e) => {
+                    if (e.alpha !== null) {
+                        setStatus('orientation', 'active', `${Math.round(e.alpha)}° כיוון`);
+                    }
+                }, { once: true });
+                setStatus('orientation', 'active', 'זמין');
+            } else {
+                setStatus('orientation', 'error', 'לא נתמך');
+            }
+
+            // Ambient Light
+            try {
+                if ('AmbientLightSensor' in window) {
+                    const light = new AmbientLightSensor();
+                    light.addEventListener('reading', () => {
+                        setStatus('ambientlight', 'active', `${light.illuminance.toFixed(0)} lux`);
+                        light.stop();
+                    });
+                    light.addEventListener('error', () => setStatus('ambientlight', 'error', 'אין הרשאה'));
+                    light.start();
+                } else {
+                    setStatus('ambientlight', 'warning', 'לא נתמך בדפדפן');
+                }
+            } catch (e) { setStatus('ambientlight', 'warning', 'נדרשת הרשאה'); }
+
+            // Proximity
+            if ('ProximitySensor' in window) {
+                setStatus('proximity', 'active', 'זמין');
+            } else {
+                setStatus('proximity', 'warning', 'לא נתמך בדפדפן');
+            }
+
+            // Camera
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const cameras = devices.filter(d => d.kind === 'videoinput');
+                if (cameras.length > 0) {
+                    setStatus('camera', 'active', `${cameras.length} מצלמות`);
+                } else {
+                    setStatus('camera', 'error', 'לא נמצא');
+                }
+            } catch (e) { setStatus('camera', 'error', 'אין גישה'); }
+
+            // Microphone
+            try {
+                const devices = await navigator.mediaDevices.enumerateDevices();
+                const mics = devices.filter(d => d.kind === 'audioinput');
+                if (mics.length > 0) {
+                    setStatus('microphone', 'active', `${mics.length} מיקרופונים`);
+                } else {
+                    setStatus('microphone', 'error', 'לא נמצא');
+                }
+            } catch (e) { setStatus('microphone', 'error', 'אין גישה'); }
+
+            // Bluetooth
+            if ('bluetooth' in navigator) {
+                setStatus('bluetooth', 'active', 'זמין');
+            } else {
+                setStatus('bluetooth', 'warning', 'לא נתמך בדפדפן');
+            }
+
+            // WiFi / Network
+            if ('connection' in navigator) {
+                const conn = navigator.connection;
+                setStatus('wifi', 'active', `${conn.effectiveType} · ${conn.downlink}Mbps`);
+            } else if (navigator.onLine) {
+                setStatus('wifi', 'active', 'מחובר');
+            } else {
+                setStatus('wifi', 'error', 'לא מחובר');
+            }
+
+            // Geolocation
+            if ('geolocation' in navigator) {
+                navigator.geolocation.getCurrentPosition(
+                    (pos) => setStatus('geolocation', 'active', `${pos.coords.latitude.toFixed(4)}, ${pos.coords.longitude.toFixed(4)}`),
+                    () => setStatus('geolocation', 'warning', 'אין הרשאה'),
+                    { timeout: 5000 }
+                );
+            } else {
+                setStatus('geolocation', 'error', 'לא נתמך');
+            }
+
+            // NFC
+            if ('NDEFReader' in window) {
+                setStatus('nfc', 'active', 'זמין');
+            } else {
+                setStatus('nfc', 'warning', 'לא נתמך בדפדפן');
+            }
+
+            // Battery
+            if ('getBattery' in navigator) {
+                const battery = await navigator.getBattery();
+                const charging = battery.charging ? '⚡' : '';
+                setStatus('battery', 'active', `${Math.round(battery.level * 100)}% ${charging}`);
+            } else {
+                setStatus('battery', 'warning', 'לא נתמך');
+            }
+
+            // Vibration
+            if ('vibrate' in navigator) {
+                setStatus('vibration', 'active', 'זמין');
+            } else {
+                setStatus('vibration', 'error', 'לא נתמך');
+            }
+
+            // WebXR
+            if ('xr' in navigator) {
+                const arSupported = await navigator.xr.isSessionSupported('immersive-ar');
+                if (arSupported) {
+                    setStatus('webxr', 'active', 'AR נתמך');
+                } else {
+                    const vrSupported = await navigator.xr.isSessionSupported('immersive-vr');
+                    setStatus('webxr', vrSupported ? 'warning' : 'error', vrSupported ? 'רק VR' : 'לא נתמך');
+                }
+            } else {
+                setStatus('webxr', 'error', 'לא נתמך');
+            }
+
+            scanBtn.classList.remove('scanning');
+            scanBtn.querySelector('span').textContent = 'סרוק';
+        }
+
+        document.getElementById('scanBtn').addEventListener('click', scanSensors);
+        
+        // Auto scan on load
+        setTimeout(scanSensors, 500);
+    </script>
+</body>
+</html>

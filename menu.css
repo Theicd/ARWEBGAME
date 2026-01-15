@@ -1,0 +1,476 @@
+/* ========================================
+   Iron Man AR - Menu System
+   Arcade Style Design
+   ======================================== */
+
+:root {
+    --menu-bg: #000;
+    --menu-accent: #00d4ff;
+    --menu-accent-glow: rgba(0, 212, 255, 0.4);
+    --menu-gold: #ffd700;
+    --menu-red: #ff3300;
+    --menu-text: #ffffff;
+    --menu-text-muted: rgba(255, 255, 255, 0.6);
+    --menu-card-bg: linear-gradient(135deg, #0a0a1a 0%, #1a1a2e 50%, #16213e 100%);
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    background: var(--menu-bg);
+    color: var(--menu-text);
+    font-family: 'Consolas', 'Courier New', monospace;
+    direction: rtl;
+    -webkit-font-smoothing: antialiased;
+}
+
+/* Background Effects */
+.bg-grid {
+    position: fixed;
+    inset: 0;
+    background-image: 
+        linear-gradient(rgba(0, 212, 255, 0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0, 212, 255, 0.03) 1px, transparent 1px);
+    background-size: 50px 50px;
+    animation: gridMove 20s linear infinite;
+    z-index: 0;
+}
+
+@keyframes gridMove {
+    0% { transform: translate(0, 0); }
+    100% { transform: translate(50px, 50px); }
+}
+
+.bg-glow {
+    position: fixed;
+    inset: 0;
+    background: 
+        radial-gradient(circle at 50% 0%, rgba(0, 212, 255, 0.15) 0%, transparent 50%),
+        radial-gradient(circle at 0% 100%, rgba(0, 212, 255, 0.1) 0%, transparent 40%),
+        radial-gradient(circle at 100% 100%, rgba(255, 51, 0, 0.08) 0%, transparent 40%);
+    z-index: 0;
+}
+
+/* Menu Container */
+.menu-container {
+    position: relative;
+    z-index: 1;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    padding: 20px;
+    padding-top: calc(20px + var(--safe-top));
+    padding-bottom: calc(20px + var(--safe-bottom));
+}
+
+/* Header / Logo */
+.menu-header {
+    text-align: center;
+    padding: 30px 0;
+    animation: fadeInDown 0.8s ease;
+}
+
+@keyframes fadeInDown {
+    from { opacity: 0; transform: translateY(-30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.logo-box {
+    position: relative;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.logo-ring {
+    position: absolute;
+    inset: 0;
+    border: 3px solid var(--menu-accent);
+    border-radius: 50%;
+    animation: logoSpin 10s linear infinite;
+    box-shadow: 
+        0 0 20px var(--menu-accent-glow),
+        inset 0 0 20px var(--menu-accent-glow);
+}
+
+.logo-ring::before {
+    content: '';
+    position: absolute;
+    top: -5px;
+    left: 50%;
+    width: 10px;
+    height: 10px;
+    background: var(--menu-accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--menu-accent);
+}
+
+.logo-ring--inner {
+    inset: 15px;
+    border-color: rgba(0, 212, 255, 0.5);
+    animation-direction: reverse;
+    animation-duration: 7s;
+}
+
+@keyframes logoSpin {
+    to { transform: rotate(360deg); }
+}
+
+.logo-icon {
+    font-size: 50px;
+    color: var(--menu-accent);
+    filter: drop-shadow(0 0 20px var(--menu-accent-glow));
+    animation: logoPulse 2s ease infinite;
+}
+
+@keyframes logoPulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.05); opacity: 0.8; }
+}
+
+.menu-title {
+    font-size: 28px;
+    font-weight: 900;
+    letter-spacing: 4px;
+    text-transform: uppercase;
+    background: linear-gradient(135deg, #fff 0%, var(--menu-accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+}
+
+.menu-subtitle {
+    font-size: 14px;
+    color: var(--menu-text-muted);
+    margin-top: 8px;
+    letter-spacing: 2px;
+}
+
+.menu-version {
+    display: inline-block;
+    margin-top: 12px;
+    padding: 4px 12px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 20px;
+    font-size: 11px;
+    color: var(--menu-accent);
+    letter-spacing: 1px;
+}
+
+/* Navigation Buttons */
+.menu-nav {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    padding: 20px 0;
+    overflow-y: auto;
+}
+
+.menu-btn {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 20px;
+    background: linear-gradient(135deg, rgba(10, 10, 26, 0.9) 0%, rgba(26, 26, 46, 0.9) 100%);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 16px;
+    text-decoration: none;
+    color: var(--menu-text);
+    cursor: pointer;
+    transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    animation: fadeInUp 0.6s ease backwards;
+    position: relative;
+    overflow: hidden;
+}
+
+.menu-btn:nth-child(1) { animation-delay: 0.1s; }
+.menu-btn:nth-child(2) { animation-delay: 0.2s; }
+.menu-btn:nth-child(3) { animation-delay: 0.3s; }
+.menu-btn:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes fadeInUp {
+    from { opacity: 0; transform: translateY(30px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.menu-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent, rgba(0, 212, 255, 0.1), transparent);
+    transform: translateX(-100%);
+    transition: transform 0.5s ease;
+}
+
+.menu-btn:hover::before,
+.menu-btn:active::before {
+    transform: translateX(100%);
+}
+
+.menu-btn:hover,
+.menu-btn:active {
+    transform: translateY(-2px) scale(1.02);
+    border-color: var(--menu-accent);
+    box-shadow: 0 8px 30px var(--menu-accent-glow);
+}
+
+.menu-btn__icon {
+    width: 50px;
+    height: 50px;
+    background: rgba(0, 212, 255, 0.1);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 22px;
+    color: var(--menu-accent);
+    flex-shrink: 0;
+    transition: all 0.3s ease;
+}
+
+.menu-btn:hover .menu-btn__icon {
+    background: rgba(0, 212, 255, 0.2);
+    box-shadow: 0 0 15px var(--menu-accent-glow);
+}
+
+.menu-btn__content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    text-align: right;
+}
+
+.menu-btn__title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.menu-btn__desc {
+    font-size: 12px;
+    color: var(--menu-text-muted);
+}
+
+.menu-btn__arrow {
+    font-size: 14px;
+    color: var(--menu-text-muted);
+    transition: transform 0.3s ease;
+}
+
+.menu-btn:hover .menu-btn__arrow {
+    transform: translateX(-5px);
+    color: var(--menu-accent);
+}
+
+/* Primary Button (Play) */
+.menu-btn--primary {
+    background: linear-gradient(135deg, rgba(0, 212, 255, 0.2) 0%, rgba(0, 100, 150, 0.2) 100%);
+    border-color: var(--menu-accent);
+    box-shadow: 0 4px 20px var(--menu-accent-glow);
+}
+
+.menu-btn--primary .menu-btn__icon {
+    background: var(--menu-accent);
+    color: #000;
+}
+
+.menu-btn--primary:hover {
+    box-shadow: 0 8px 40px var(--menu-accent-glow);
+}
+
+/* Install Button */
+.menu-btn--install {
+    background: linear-gradient(135deg, rgba(255, 215, 0, 0.1) 0%, rgba(255, 150, 0, 0.1) 100%);
+    border-color: rgba(255, 215, 0, 0.3);
+}
+
+.menu-btn--install .menu-btn__icon {
+    background: rgba(255, 215, 0, 0.2);
+    border-color: rgba(255, 215, 0, 0.4);
+    color: var(--menu-gold);
+}
+
+.menu-btn--available {
+    animation: pulseGold 2s ease infinite;
+}
+
+@keyframes pulseGold {
+    0%, 100% { box-shadow: 0 4px 20px rgba(255, 215, 0, 0.2); }
+    50% { box-shadow: 0 4px 30px rgba(255, 215, 0, 0.4); }
+}
+
+/* Footer Status */
+.menu-footer {
+    display: flex;
+    justify-content: center;
+    gap: 30px;
+    padding: 15px;
+    border-top: 1px solid rgba(0, 212, 255, 0.1);
+    animation: fadeIn 1s ease 0.5s backwards;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.status-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    color: var(--menu-text-muted);
+}
+
+.status-item i {
+    color: var(--menu-accent);
+    font-size: 14px;
+}
+
+/* Responsive - Tablets */
+@media (min-width: 600px) {
+    .menu-container {
+        max-width: 500px;
+        margin: 0 auto;
+    }
+}
+
+/* Landscape Mode */
+@media (orientation: landscape) {
+    .menu-container {
+        flex-direction: row;
+        flex-wrap: wrap;
+        align-items: flex-start;
+        padding: 15px;
+    }
+    
+    .menu-header {
+        width: 40%;
+        padding: 15px;
+    }
+    
+    .logo-box {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 10px;
+    }
+    
+    .logo-icon {
+        font-size: 35px;
+    }
+    
+    .menu-title {
+        font-size: 20px;
+    }
+    
+    .menu-subtitle {
+        font-size: 12px;
+    }
+    
+    .menu-nav {
+        width: 60%;
+        padding: 15px;
+        gap: 10px;
+    }
+    
+    .menu-btn {
+        padding: 12px 16px;
+    }
+    
+    .menu-btn__icon {
+        width: 40px;
+        height: 40px;
+        font-size: 18px;
+    }
+    
+    .menu-btn__title {
+        font-size: 15px;
+    }
+    
+    .menu-footer {
+        width: 100%;
+        padding: 10px;
+    }
+}
+
+/* Small phones */
+@media (max-height: 600px) {
+    .menu-header {
+        padding: 15px 0;
+    }
+    
+    .logo-box {
+        width: 80px;
+        height: 80px;
+        margin-bottom: 10px;
+    }
+    
+    .logo-icon {
+        font-size: 35px;
+    }
+    
+    .menu-title {
+        font-size: 22px;
+    }
+    
+    .menu-nav {
+        gap: 10px;
+        padding: 10px 0;
+    }
+    
+    .menu-btn {
+        padding: 12px 16px;
+    }
+}
+
+/* Large phones / Tablets landscape */
+@media (min-width: 768px) and (orientation: landscape) {
+    .menu-container {
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .menu-header {
+        width: 35%;
+    }
+    
+    .menu-nav {
+        width: 65%;
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 12px;
+    }
+}
+
+/* Safe areas for notched phones */
+@supports (padding: env(safe-area-inset-top)) {
+    .menu-container {
+        padding-top: calc(20px + env(safe-area-inset-top));
+        padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        padding-left: calc(20px + env(safe-area-inset-left));
+        padding-right: calc(20px + env(safe-area-inset-right));
+    }
+}
+
+/* PWA Standalone mode */
+@media (display-mode: standalone) {
+    .menu-btn--install {
+        display: none;
+    }
+}
