@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-ar-v79-fixed-enemies';
+const CACHE_NAME = 'iron-ar-v80-gyro-enemies';
 const urlsToCache = [
   './',
   './index.html',

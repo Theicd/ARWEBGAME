@@ -234,40 +234,93 @@ window.onload = function() {
     }
     initAudio();
 
-    // === FIXED SCREEN ENEMIES ===
-    // Enemies are FIXED on the screen - they DON'T move with camera
-    // Player must physically move the phone to aim the crosshair at them
+    // === GYROSCOPE-BASED ENEMIES ===
+    // Enemies have a WORLD position. When phone rotates, enemies move OPPOSITE direction.
+    // This creates the illusion that enemies are fixed in the real world.
+    
+    let initialAlpha = null;
+    let initialBeta = null;
+    let currentAlpha = 0;
+    let currentBeta = 0;
+    
+    // Listen to device orientation FIRST
+    window.addEventListener('deviceorientation', (e) => {
+        if(e.alpha === null) return;
+        
+        // Set initial orientation on first reading
+        if(initialAlpha === null) {
+            initialAlpha = e.alpha;
+            initialBeta = e.beta || 0;
+        }
+        
+        // Calculate delta from initial position
+        let deltaAlpha = e.alpha - initialAlpha;
+        if(deltaAlpha > 180) deltaAlpha -= 360;
+        if(deltaAlpha < -180) deltaAlpha += 360;
+        
+        let deltaBeta = (e.beta || 0) - initialBeta;
+        
+        currentAlpha = deltaAlpha;
+        currentBeta = deltaBeta;
+        
+        // Move ALL enemies opposite to camera movement
+        for(let enemy of enemies) {
+            if(!enemy.parentNode) continue;
+            
+            const baseX = parseFloat(enemy.dataset.baseX) || 50;
+            const baseY = parseFloat(enemy.dataset.baseY) || 50;
+            
+            // Move OPPOSITE to camera rotation
+            // Camera goes right (alpha increases) -> enemy goes left on screen
+            const screenX = baseX - (deltaAlpha * 2);
+            const screenY = baseY + (deltaBeta * 1.5);
+            
+            // Check if in view
+            if(screenX < -10 || screenX > 110 || screenY < -10 || screenY > 110) {
+                enemy.style.display = 'none';
+            } else {
+                enemy.style.display = 'flex';
+                enemy.style.left = screenX + '%';
+                enemy.style.top = screenY + '%';
+            }
+        }
+    }, true);
     
     function createEnemyOverlay() {
         if(enemies.length >= MAX_ENEMIES) return;
         
-        // Use body, not HUD - completely separate from camera
         const container = document.body;
         
-        // Fixed position on screen (NOT center - that's where reticle is)
+        // Base position (where enemy "is" in the world relative to initial view)
         const side = Math.random() > 0.5 ? 'left' : 'right';
-        const xPos = side === 'left' ? (5 + Math.random() * 30) : (65 + Math.random() * 30);
-        const yPos = 15 + Math.random() * 55;
+        const baseX = side === 'left' ? (10 + Math.random() * 25) : (65 + Math.random() * 25);
+        const baseY = 20 + Math.random() * 45;
         
         const enemy = document.createElement('div');
         enemy.className = 'enemy-overlay';
         enemy.id = 'enemy-' + Date.now();
         enemy.style.cssText = `
             position: fixed !important;
-            left: ${xPos}% !important;
-            top: ${yPos}% !important;
+            left: ${baseX}% !important;
+            top: ${baseY}% !important;
             transform: translate(-50%, -50%);
             z-index: 50 !important;
             pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
         `;
         enemy.innerHTML = `
             <div class="enemy-marker">
                 <div class="enemy-ring"></div>
                 <div class="enemy-core">◆</div>
             </div>
-            <div class="enemy-label">DRONE ${(2 + Math.random() * 4).toFixed(1)}m</div>
+            <div class="enemy-label">DRONE</div>
         `;
         
+        // Store BASE position (world position)
+        enemy.dataset.baseX = baseX;
+        enemy.dataset.baseY = baseY;
         enemy.dataset.health = 100;
         enemy.dataset.type = 'DRONE';
         enemy.dataset.distance = (2 + Math.random() * 5).toFixed(1);
@@ -275,12 +328,12 @@ window.onload = function() {
         container.appendChild(enemy);
         enemies.push(enemy);
         
-        console.log('Enemy FIXED at screen position:', xPos.toFixed(0) + '%', yPos.toFixed(0) + '%');
+        console.log('Enemy spawned at world position:', baseX.toFixed(0), baseY.toFixed(0));
     }
     
     // Spawn enemies periodically
     setInterval(createEnemyOverlay, ENEMY_SPAWN_INTERVAL);
-    setTimeout(createEnemyOverlay, 2000); // First enemy after 2 sec
+    setTimeout(createEnemyOverlay, 2000);
 
     // === COMBAT SYSTEM - LOCK & FIRE ===
     function checkEnemyLock() {
