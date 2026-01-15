@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-ar-v16-restored-cal-visor';
+const CACHE_NAME = 'iron-ar-v19-tactical-final';
 const urlsToCache = [
   './',
   './index.html',

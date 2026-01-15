@@ -34,7 +34,7 @@
     </div>
 
     <div id="hud">
-        <!-- TOP: FULL WIDTH COMPASS ONLY -->
+        <!-- TOP: FULL WIDTH COMPASS -->
         <div class="compass-container-full">
             <div class="heading-display"><span id="heading-val">000</span>°</div>
             <div class="compass-tape-window">
@@ -55,47 +55,46 @@
             <div class="crosshair-v"></div>
         </div>
 
-        <!-- BOTTOM: TACTICAL DASHBOARD -->
+        <!-- BOTTOM: UNIFIED TACTICAL DASHBOARD -->
         <div class="bottom-dashboard">
-            <!-- Bottom Left: SYSTEMS -->
-            <div class="hud-panel left-panel">
-                <div class="panel-header">SYSTEMS</div>
-                <div class="row">
-                    <span class="label">PWR</span>
-                    <span class="val" id="battery-level">100%</span>
+            <!-- Left Section: Systems -->
+            <div class="hud-section">
+                <div class="hud-data-point">
+                    <span class="label-tiny">PWR</span>
+                    <span class="val-med" id="battery-level">100%</span>
                 </div>
-                <div class="row">
-                    <span class="label">G-FORCE</span>
-                    <span class="val" id="g-force">1.0</span>
+                <div class="hud-divider"></div>
+                <div class="hud-data-point">
+                    <span class="label-tiny">G-FORCE</span>
+                    <span class="val-med" id="g-force">1.0</span>
                 </div>
-                <div class="row">
-                    <span class="label">LIGHT</span>
-                    <span class="val"><span id="lux-level">--</span> Lx</span>
-                </div>
-                <div class="row">
-                    <span class="label">EM FIELD</span>
-                    <span class="val"><span id="emf-level">--</span> uT</span>
+                <div class="hud-divider"></div>
+                <div class="hud-data-point">
+                    <span class="label-tiny">ENV</span>
+                    <span class="val-med"><span id="lux-level">--</span> Lx</span>
+                    <span class="val-med" style="font-size:10px; color:#00ffff;"><span id="emf-level">--</span> uT</span>
                 </div>
             </div>
 
-            <!-- Bottom Center: VOICE -->
-            <div class="voice-center" id="voice-viz">
-                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
-                <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <!-- Center Section: Voice -->
+            <div class="voice-viz-mini" id="voice-viz">
+                <div class="eq-bar-mini"></div><div class="eq-bar-mini"></div><div class="eq-bar-mini"></div><div class="eq-bar-mini"></div>
+                <div class="eq-bar-mini"></div><div class="eq-bar-mini"></div><div class="eq-bar-mini"></div><div class="eq-bar-mini"></div>
+                <div class="eq-bar-mini"></div><div class="eq-bar-mini"></div><div class="eq-bar-mini"></div><div class="eq-bar-mini"></div>
             </div>
 
-            <!-- Bottom Right: TARGETING -->
-            <div class="hud-panel right-panel">
-                <div class="panel-header">TARGETING</div>
-                <div class="target-display">
-                    <div class="rf-value"><span id="rf-dist">----</span> <span style="font-size:12px">M</span></div>
-                    <div class="rf-target" id="rf-name">SCANNING</div>
+            <!-- Right Section: Targeting & GPS -->
+            <div class="hud-section" style="text-align: right;">
+                <div class="hud-data-point">
+                    <span class="label-tiny">GPS</span>
+                    <span class="val-med" style="font-size:10px;">ALT: <span id="altitude-val">--</span></span>
+                    <span class="val-med" style="font-size:10px;">SPD: <span id="speed-val">0</span></span>
                 </div>
-                <div class="gps-sub">
-                    <span>ALT: <span id="altitude-val">--</span></span>
-                    <span>SPD: <span id="speed-val">0</span></span>
+                <div class="hud-divider"></div>
+                <div class="hud-data-point target-box">
+                    <span class="label-tiny">TARGET</span>
+                    <div class="val-large"><span id="rf-dist">----</span> <span style="font-size:12px">M</span></div>
+                    <div class="target-name" id="rf-name">SCANNING</div>
                 </div>
             </div>
         </div>
