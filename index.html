@@ -128,26 +128,47 @@
         </div>
     </div>
     
-    <!-- AR Scene -->
+    <!-- AR Scene - WebXR Mode -->
     <a-scene 
-        renderer="alpha: true; antialias: true; colorManagement: true;"
-        webxr="optionalFeatures: hit-test, dom-overlay; overlayElement: #hud;" 
-        embedded 
-        arjs="sourceType: webcam; debugUIEnabled: false;" 
-        vr-mode-ui="enabled: false">
+        renderer="alpha: true; antialias: true; colorManagement: true; logarithmicDepthBuffer: true;"
+        webxr="requiredFeatures: hit-test; optionalFeatures: dom-overlay, local-floor; overlayElement: #hud;" 
+        vr-mode-ui="enabled: false"
+        xr-mode-ui="enabled: false">
         
-        <a-entity id="reticle-target" hit-test-controls="mode: origin" visible="false">
-            <a-ring rotation="-90 0 0" color="#00ffff" radius-inner="0.1" radius-outer="0.15"></a-ring>
+        <!-- Hit Test Reticle - shows where surfaces are detected -->
+        <a-entity id="ar-reticle" visible="false">
+            <a-ring rotation="-90 0 0" color="#00ffff" radius-inner="0.08" radius-outer="0.12"
+                    animation="property: rotation; from: -90 0 0; to: -90 360 0; dur: 3000; loop: true; easing: linear"></a-ring>
+            <a-ring rotation="-90 0 0" color="#00ffff" radius-inner="0.15" radius-outer="0.18" opacity="0.5"></a-ring>
         </a-entity>
 
-        <a-entity id="target-dummy" visible="false" position="0 0 -3">
-            <a-cylinder color="#333" height="0.1" radius="0.3"></a-cylinder>
-            <a-cylinder color="#aaa" height="1.5" radius="0.05" position="0 0.75 0"></a-cylinder>
-            <a-box color="#ff0000" depth="0.1" height="0.5" width="0.5" position="0 1.5 0"></a-box>
-        </a-entity>
+        <!-- Container for spawned enemies -->
+        <a-entity id="enemy-container"></a-entity>
 
-        <a-entity camera></a-entity>
+        <!-- Camera -->
+        <a-entity id="camera-rig">
+            <a-entity camera look-controls="enabled: false"></a-entity>
+        </a-entity>
     </a-scene>
+    
+    <!-- Enter AR Button -->
+    <button id="enter-ar-btn" style="
+        position: fixed;
+        bottom: 100px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: linear-gradient(135deg, #00aaff, #0066cc);
+        color: white;
+        border: 2px solid #00ffff;
+        padding: 15px 40px;
+        font-size: 18px;
+        font-weight: bold;
+        font-family: inherit;
+        letter-spacing: 2px;
+        cursor: pointer;
+        z-index: 100000;
+        box-shadow: 0 0 20px rgba(0,255,255,0.5);
+    ">▶ ENTER AR MODE</button>
     <script src="game_logic_v10.js"></script>
 </body>
 </html>

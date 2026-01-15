@@ -234,127 +234,151 @@ window.onload = function() {
     }
     initAudio();
 
-    // === GYROSCOPE-BASED ENEMIES ===
-    // Enemies have a WORLD position. When phone rotates, enemies move OPPOSITE direction.
-    // This creates the illusion that enemies are fixed in the real world.
+    // === WEBXR AR MODE ===
+    let xrSession = null;
+    let xrHitTestSource = null;
+    let xrRefSpace = null;
+    let arReticle = null;
+    let lastHitPose = null;
+    let isInAR = false;
     
-    let initialAlpha = null;
-    let initialBeta = null;
-    let currentAlpha = 0;
-    let currentBeta = 0;
+    const enterARBtn = document.getElementById('enter-ar-btn');
+    const scene = document.querySelector('a-scene');
+    const enemyContainer = document.getElementById('enemy-container');
     
-    // Listen to device orientation FIRST
-    window.addEventListener('deviceorientation', (e) => {
-        if(e.alpha === null) return;
-        
-        // Set initial orientation on first reading
-        if(initialAlpha === null) {
-            initialAlpha = e.alpha;
-            initialBeta = e.beta || 0;
-        }
-        
-        // Calculate delta from initial position
-        let deltaAlpha = e.alpha - initialAlpha;
-        if(deltaAlpha > 180) deltaAlpha -= 360;
-        if(deltaAlpha < -180) deltaAlpha += 360;
-        
-        let deltaBeta = (e.beta || 0) - initialBeta;
-        
-        currentAlpha = deltaAlpha;
-        currentBeta = deltaBeta;
-        
-        // Move ALL enemies opposite to camera movement
-        for(let enemy of enemies) {
-            if(!enemy.parentNode) continue;
-            
-            const baseX = parseFloat(enemy.dataset.baseX) || 50;
-            const baseY = parseFloat(enemy.dataset.baseY) || 50;
-            
-            // Move OPPOSITE to camera rotation
-            // Camera goes right (alpha increases) -> enemy goes left on screen
-            const screenX = baseX - (deltaAlpha * 2);
-            const screenY = baseY + (deltaBeta * 1.5);
-            
-            // Check if in view
-            if(screenX < -10 || screenX > 110 || screenY < -10 || screenY > 110) {
-                enemy.style.display = 'none';
-            } else {
-                enemy.style.display = 'flex';
-                enemy.style.left = screenX + '%';
-                enemy.style.top = screenY + '%';
+    // Enter AR button
+    if(enterARBtn) {
+        enterARBtn.addEventListener('click', async () => {
+            if(!navigator.xr) {
+                alert('WebXR לא נתמך בדפדפן זה. נסה Chrome על אנדרואיד או Safari על iOS.');
+                return;
             }
-        }
-    }, true);
-    
-    function createEnemyOverlay() {
-        if(enemies.length >= MAX_ENEMIES) return;
-        
-        const container = document.body;
-        
-        // Base position (where enemy "is" in the world relative to initial view)
-        const side = Math.random() > 0.5 ? 'left' : 'right';
-        const baseX = side === 'left' ? (10 + Math.random() * 25) : (65 + Math.random() * 25);
-        const baseY = 20 + Math.random() * 45;
-        
-        const enemy = document.createElement('div');
-        enemy.className = 'enemy-overlay';
-        enemy.id = 'enemy-' + Date.now();
-        enemy.style.cssText = `
-            position: fixed !important;
-            left: ${baseX}% !important;
-            top: ${baseY}% !important;
-            transform: translate(-50%, -50%);
-            z-index: 50 !important;
-            pointer-events: none;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-        `;
-        enemy.innerHTML = `
-            <div class="enemy-marker">
-                <div class="enemy-ring"></div>
-                <div class="enemy-core">◆</div>
-            </div>
-            <div class="enemy-label">DRONE</div>
-        `;
-        
-        // Store BASE position (world position)
-        enemy.dataset.baseX = baseX;
-        enemy.dataset.baseY = baseY;
-        enemy.dataset.health = 100;
-        enemy.dataset.type = 'DRONE';
-        enemy.dataset.distance = (2 + Math.random() * 5).toFixed(1);
-        
-        container.appendChild(enemy);
-        enemies.push(enemy);
-        
-        console.log('Enemy spawned at world position:', baseX.toFixed(0), baseY.toFixed(0));
+            
+            const supported = await navigator.xr.isSessionSupported('immersive-ar');
+            if(!supported) {
+                alert('AR לא נתמך במכשיר זה. נדרש ARCore (אנדרואיד) או ARKit (iOS).');
+                return;
+            }
+            
+            try {
+                xrSession = await navigator.xr.requestSession('immersive-ar', {
+                    requiredFeatures: ['hit-test'],
+                    optionalFeatures: ['dom-overlay', 'local-floor'],
+                    domOverlay: { root: document.getElementById('hud') }
+                });
+                
+                enterARBtn.style.display = 'none';
+                isInAR = true;
+                
+                // Setup hit test
+                const viewerSpace = await xrSession.requestReferenceSpace('viewer');
+                xrHitTestSource = await xrSession.requestHitTestSource({ space: viewerSpace });
+                xrRefSpace = await xrSession.requestReferenceSpace('local-floor');
+                
+                // Show AR reticle
+                arReticle = document.getElementById('ar-reticle');
+                if(arReticle) arReticle.setAttribute('visible', 'true');
+                
+                // Start AR render loop
+                scene.renderer.xr.enabled = true;
+                scene.renderer.xr.setReferenceSpaceType('local-floor');
+                await scene.renderer.xr.setSession(xrSession);
+                
+                // Spawn first enemy after 3 seconds
+                setTimeout(() => spawnEnemy3D(), 3000);
+                
+                // Spawn enemies periodically
+                setInterval(() => {
+                    if(isInAR && enemies.length < MAX_ENEMIES) {
+                        spawnEnemy3D();
+                    }
+                }, ENEMY_SPAWN_INTERVAL);
+                
+                console.log('AR Session started!');
+                
+                xrSession.addEventListener('end', () => {
+                    isInAR = false;
+                    enterARBtn.style.display = 'block';
+                    console.log('AR Session ended');
+                });
+                
+            } catch(e) {
+                console.error('AR Error:', e);
+                alert('שגיאה בהפעלת AR: ' + e.message);
+            }
+        });
     }
     
-    // Spawn enemies periodically
-    setInterval(createEnemyOverlay, ENEMY_SPAWN_INTERVAL);
-    setTimeout(createEnemyOverlay, 2000);
+    // Spawn 3D enemy at a position in front of camera
+    function spawnEnemy3D() {
+        if(!enemyContainer) return;
+        
+        // Random position in front of camera
+        const angle = (Math.random() - 0.5) * 1.5; // -0.75 to 0.75 radians (~45 degrees each side)
+        const distance = 2 + Math.random() * 3; // 2-5 meters away
+        const x = Math.sin(angle) * distance;
+        const z = -Math.cos(angle) * distance;
+        const y = 0.5 + Math.random() * 1; // 0.5-1.5m above ground
+        
+        const enemy = document.createElement('a-entity');
+        enemy.setAttribute('id', 'enemy-' + Date.now());
+        enemy.setAttribute('class', 'ar-enemy');
+        enemy.setAttribute('position', `${x} ${y} ${z}`);
+        
+        // DRONE enemy - sphere with rotating ring
+        enemy.innerHTML = `
+            <a-sphere radius="0.25" color="#222" metalness="0.9" roughness="0.1"></a-sphere>
+            <a-ring rotation="90 0 0" radius-inner="0.35" radius-outer="0.45" color="#ff0000" opacity="0.8"
+                    animation="property: rotation; from: 90 0 0; to: 90 360 0; dur: 2000; loop: true; easing: linear"></a-ring>
+            <a-light type="point" color="#ff3300" intensity="0.8" distance="2"></a-light>
+        `;
+        
+        enemy.dataset.health = '100';
+        enemy.dataset.type = 'DRONE';
+        
+        enemyContainer.appendChild(enemy);
+        enemies.push(enemy);
+        
+        console.log('3D Enemy spawned at:', x.toFixed(2), y.toFixed(2), z.toFixed(2));
+    }
+    
+    // Tap to spawn enemy (for testing without full AR)
+    document.addEventListener('click', (e) => {
+        if(e.target.id === 'enter-ar-btn') return;
+        if(isInAR && lastHitPose && enemies.length < MAX_ENEMIES) {
+            // Spawn at hit test location
+            const pos = lastHitPose.transform.position;
+            spawnEnemyAt3D(pos.x, pos.y + 0.5, pos.z);
+        }
+    });
 
     // === COMBAT SYSTEM - LOCK & FIRE ===
     function checkEnemyLock() {
-        // Screen center (where reticle is)
-        const cx = window.innerWidth / 2;
-        const cy = window.innerHeight / 2;
-        const tolerance = 60; // px
+        const camera = document.querySelector('[camera]');
+        if(!camera || !camera.object3D) return null;
+        
+        const camPos = new THREE.Vector3();
+        const camDir = new THREE.Vector3();
+        camera.object3D.getWorldPosition(camPos);
+        camera.object3D.getWorldDirection(camDir);
         
         for(let enemy of enemies) {
-            if(!enemy.parentNode) continue;
+            if(!enemy.parentNode || !enemy.object3D) continue;
             
-            const rect = enemy.getBoundingClientRect();
-            const enemyCx = rect.left + rect.width / 2;
-            const enemyCy = rect.top + rect.height / 2;
+            const enemyPos = new THREE.Vector3();
+            enemy.object3D.getWorldPosition(enemyPos);
             
-            // Check if reticle is over enemy
-            const dx = Math.abs(cx - enemyCx);
-            const dy = Math.abs(cy - enemyCy);
+            const toEnemy = new THREE.Vector3().subVectors(enemyPos, camPos);
+            const distance = toEnemy.length();
             
-            if(dx < tolerance && dy < tolerance) {
-                const distance = parseFloat(enemy.dataset.distance) || 3;
+            // Normalize
+            toEnemy.normalize();
+            
+            // Dot product - how aligned are we? (1 = perfect, 0 = perpendicular)
+            const dot = camDir.dot(toEnemy);
+            
+            // If dot > 0.95, we're looking at it (within ~18 degrees)
+            if(dot > 0.92 && distance < 15) {
                 return { enemy, distance };
             }
         }
@@ -381,9 +405,12 @@ window.onload = function() {
         if(health <= 0) {
             destroyEnemy(enemy);
         } else {
-            // Hit effect - flash enemy
-            enemy.classList.add('hit');
-            setTimeout(() => enemy.classList.remove('hit'), 200);
+            // Hit effect - flash enemy color
+            const sphere = enemy.querySelector('a-sphere');
+            if(sphere) {
+                sphere.setAttribute('color', '#ff6600');
+                setTimeout(() => sphere.setAttribute('color', '#222'), 200);
+            }
         }
     }
     
@@ -391,14 +418,27 @@ window.onload = function() {
         console.log('ENEMY DESTROYED:', enemy.id);
         kills++;
         
-        // Explosion effect on enemy position
-        enemy.classList.add('exploding');
+        // Create explosion at enemy position
+        if(enemy.object3D) {
+            const pos = enemy.object3D.position;
+            const explosion = document.createElement('a-entity');
+            explosion.setAttribute('position', `${pos.x} ${pos.y} ${pos.z}`);
+            explosion.innerHTML = `
+                <a-sphere radius="0.1" color="#ffff00" material="emissive: #ff6600; emissiveIntensity: 3"
+                          animation="property: scale; from: 1 1 1; to: 5 5 5; dur: 300"
+                          animation__fade="property: material.opacity; from: 1; to: 0; dur: 300"></a-sphere>
+                <a-light type="point" color="#ff6600" intensity="3" distance="5"
+                         animation="property: intensity; from: 3; to: 0; dur: 300"></a-light>
+            `;
+            if(enemyContainer) {
+                enemyContainer.appendChild(explosion);
+                setTimeout(() => explosion.remove(), 400);
+            }
+        }
         
         // Remove from array
         enemies = enemies.filter(e => e !== enemy);
-        
-        // Remove after animation
-        setTimeout(() => enemy.remove(), 400);
+        enemy.remove();
         
         // Vibrate success
         if(navigator.vibrate) navigator.vibrate([100, 50, 100, 50, 200]);

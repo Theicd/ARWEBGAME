@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-ar-v80-gyro-enemies';
+const CACHE_NAME = 'iron-ar-v81-webxr-ar';
 const urlsToCache = [
   './',
   './index.html',
