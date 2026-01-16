@@ -1,301 +1,108 @@
 <!DOCTYPE html>
-<html lang="he" dir="rtl">
+<html lang="he">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0, user-scalable=yes, viewport-fit=cover">
-    <meta name="theme-color" content="#00d4ff">
-    <meta name="theme-color" media="(prefers-color-scheme: dark)" content="#000000">
-    <meta name="description" content="Iron Man AR - Tactical HUD System with sensors and combat mode">
-    <meta name="mobile-web-app-capable" content="yes">
-    
-    <!-- iOS Meta Tags -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="theme-color" content="#000000">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="IronAR">
-    <link rel="apple-touch-icon" href="icons/icon.svg">
-    <link rel="apple-touch-icon" sizes="180x180" href="icons/icon.svg">
-    
-    <!-- Android/Chrome -->
-    <link rel="icon" type="image/svg+xml" href="icons/icon.svg">
-    <link rel="shortcut icon" href="icons/icon.svg">
-    
-    <!-- Manifest -->
     <link rel="manifest" href="manifest.json">
-    
-    <!-- Microsoft -->
-    <meta name="msapplication-TileColor" content="#000000">
-    <meta name="msapplication-config" content="browserconfig.xml">
-    
-    <title>Iron Man AR · Tactical HUD</title>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-    <link rel="stylesheet" href="menu.css">
-</head>
-<body>
-    <!-- Background Animation -->
-    <div class="bg-grid"></div>
-    <div class="bg-glow"></div>
-    
-    <!-- Main Menu -->
-    <main class="menu-container">
-        <!-- Logo Section -->
-        <header class="menu-header">
-            <div class="logo-box">
-                <div class="logo-ring"></div>
-                <div class="logo-ring logo-ring--inner"></div>
-                <i class="fa-solid fa-helmet-safety logo-icon"></i>
-            </div>
-            <h1 class="menu-title">TACTICAL HUD</h1>
-            <p class="menu-subtitle">Iron Man AR System · Mk.IX</p>
-            <div class="menu-version">v2.0.81</div>
-        </header>
-
-        <!-- Menu Buttons -->
-        <nav class="menu-nav">
-            <!-- Play Game Button -->
-            <a href="game.html" class="menu-btn menu-btn--primary">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-play"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">הפעל משחק</span>
-                    <span class="menu-btn__desc">כניסה למצב AR קרבי</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </a>
-
-            <!-- Calibration Button -->
-            <a href="calibration.html" class="menu-btn menu-btn--calibration">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-crosshairs"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">כיול חדר</span>
-                    <span class="menu-btn__desc">סריקת מרחקים לדיוק מרבי</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </a>
-
-            <!-- Diagnostics Button -->
-            <a href="diagnostics.html" class="menu-btn menu-btn--diagnostics">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-stethoscope"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">כיול מערכת</span>
-                    <span class="menu-btn__desc">בדיקת GPU, AI וחיישנים</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </a>
-
-            <!-- Sensors Button -->
-            <a href="sensors.html" class="menu-btn">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-microchip"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">חיישנים</span>
-                    <span class="menu-btn__desc">סריקת חומרה ואביזרים</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </a>
-
-            <!-- Functions Button -->
-            <a href="functions.html" class="menu-btn">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-diagram-project"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">פונקציות</span>
-                    <span class="menu-btn__desc">שילוב חיישנים ליצירת נתונים</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </a>
-
-            <!-- Debug Logs Button -->
-            <a href="logs.html" class="menu-btn menu-btn--debug">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-terminal"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">לוגים</span>
-                    <span class="menu-btn__desc">דיבוג ומעקב אחר המערכת</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </a>
-
-            <!-- Install Button -->
-            <button class="menu-btn menu-btn--install" id="installBtn">
-                <div class="menu-btn__icon">
-                    <i class="fa-solid fa-download"></i>
-                </div>
-                <div class="menu-btn__content">
-                    <span class="menu-btn__title">התקן אפליקציה</span>
-                    <span class="menu-btn__desc">הוסף למסך הבית</span>
-                </div>
-                <i class="fa-solid fa-chevron-left menu-btn__arrow"></i>
-            </button>
-        </nav>
-
-        <!-- Status Bar -->
-        <footer class="menu-footer">
-            <div class="status-item">
-                <i class="fa-solid fa-signal"></i>
-                <span>מוכן</span>
-            </div>
-            <div class="status-item">
-                <i class="fa-solid fa-battery-full"></i>
-                <span id="batteryLevel">--</span>
-            </div>
-            <div class="status-item">
-                <i class="fa-solid fa-clock"></i>
-                <span id="currentTime">--:--</span>
-            </div>
-        </footer>
-    </main>
-
+    <title>Iron Man AR Mk.III</title>
     <script>
-        // Update time
-        function updateTime() {
-            const now = new Date();
-            document.getElementById('currentTime').textContent = 
-                now.toLocaleTimeString('he-IL', { hour: '2-digit', minute: '2-digit' });
-        }
-        updateTime();
-        setInterval(updateTime, 1000);
-
-        // Battery status
-        if ('getBattery' in navigator) {
-            navigator.getBattery().then(battery => {
-                document.getElementById('batteryLevel').textContent = 
-                    Math.round(battery.level * 100) + '%';
-                battery.addEventListener('levelchange', () => {
-                    document.getElementById('batteryLevel').textContent = 
-                        Math.round(battery.level * 100) + '%';
-                });
-            });
-        }
-
-        // PWA Install
-        let deferredPrompt;
-        const installBtn = document.getElementById('installBtn');
-
-        window.addEventListener('beforeinstallprompt', (e) => {
-            e.preventDefault();
-            deferredPrompt = e;
-            installBtn.classList.add('menu-btn--available');
-        });
-
-        installBtn.addEventListener('click', async () => {
-            if (deferredPrompt) {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.querySelector('.menu-btn__desc').textContent = 'הותקן בהצלחה!';
-                }
-                deferredPrompt = null;
-            } else {
-                alert('האפליקציה כבר מותקנת או לא זמינה להתקנה');
-            }
-        });
-
-        // Service Worker with Auto-Update
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').then(reg => {
-                // Check for updates on page load
-                reg.update();
-                
-                // Check for updates every 60 seconds
-                setInterval(() => reg.update(), 60000);
-                
-                // Listen for new SW waiting
-                reg.addEventListener('updatefound', () => {
-                    const newWorker = reg.installing;
-                    newWorker.addEventListener('statechange', () => {
-                        if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
-                            showUpdateNotification();
-                        }
-                    });
-                });
-            });
-            
-            // Listen for messages from SW
-            navigator.serviceWorker.addEventListener('message', event => {
-                if (event.data.type === 'UPDATE_AVAILABLE') {
-                    showUpdateNotification(event.data.changelog);
-                }
-                if (event.data.type === 'SW_UPDATED') {
-                    console.log('App updated to:', event.data.version);
-                }
-            });
-        }
-        
-        // Update notification UI
-        function showUpdateNotification(changelog = 'עדכון חדש זמין') {
-            // Remove existing notification
-            const existing = document.getElementById('update-notification');
-            if (existing) existing.remove();
-            
-            const notification = document.createElement('div');
-            notification.id = 'update-notification';
-            notification.innerHTML = `
-                <div style="
-                    position: fixed;
-                    top: 20px;
-                    left: 50%;
-                    transform: translateX(-50%);
-                    background: linear-gradient(135deg, #00aa44 0%, #008833 100%);
-                    color: white;
-                    padding: 15px 25px;
-                    border-radius: 12px;
-                    box-shadow: 0 4px 20px rgba(0,170,68,0.4);
-                    z-index: 999999;
-                    display: flex;
-                    align-items: center;
-                    gap: 15px;
-                    font-family: inherit;
-                    animation: slideDown 0.3s ease;
-                ">
-                    <i class="fa-solid fa-arrow-rotate-right" style="font-size: 20px;"></i>
-                    <div>
-                        <div style="font-weight: bold; margin-bottom: 3px;">עדכון זמין!</div>
-                        <div style="font-size: 12px; opacity: 0.9;">${changelog}</div>
-                    </div>
-                    <button onclick="applyUpdate()" style="
-                        background: white;
-                        color: #008833;
-                        border: none;
-                        padding: 8px 16px;
-                        border-radius: 8px;
-                        font-weight: bold;
-                        cursor: pointer;
-                        margin-right: 10px;
-                    ">עדכן עכשיו</button>
-                    <button onclick="this.parentElement.remove()" style="
-                        background: transparent;
-                        color: white;
-                        border: none;
-                        font-size: 18px;
-                        cursor: pointer;
-                        opacity: 0.7;
-                    ">&times;</button>
-                </div>
-            `;
-            document.body.appendChild(notification);
-        }
-        
-        // Apply update - reload page
-        function applyUpdate() {
-            if (navigator.serviceWorker.controller) {
-                navigator.serviceWorker.controller.postMessage('SKIP_WAITING');
-            }
-            window.location.reload(true);
+            navigator.serviceWorker.register('sw.js');
         }
     </script>
-    <style>
-        @keyframes slideDown {
-            from { transform: translateX(-50%) translateY(-100%); opacity: 0; }
-            to { transform: translateX(-50%) translateY(0); opacity: 1; }
-        }
-    </style>
+    <script src="https://aframe.io/releases/1.4.0/aframe.min.js"></script>
+    <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div id="boot-screen" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: #000; color: #00ffff; font-family: 'Courier New', monospace; z-index: 2000; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+        <h1 id="boot-text">INITIALIZING SYSTEM...</h1>
+        <div style="width: 300px; height: 4px; background: #003333; margin-top: 20px;">
+            <div id="boot-progress" style="width: 0%; height: 100%; background: #00ffff; transition: width 0.2s;"></div>
+        </div>
+        <div id="boot-log" style="margin-top: 20px; font-size: 12px; height: 100px; overflow: hidden; text-align: left; width: 300px; color: rgba(0, 255, 255, 0.7);"></div>
+    </div>
+
+    <!-- Detection Boxes Overlay -->
+    <canvas id="detection-canvas" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 50; pointer-events: none;"></canvas>
+
+    <!-- HUD Overlay -->
+    <div id="hud">
+        
+        <!-- TOP CENTER: Compass -->
+        <div class="compass-container">
+            <div class="heading-display"><span id="heading-val">000</span>°</div>
+            <div class="compass-tape-window">
+                <div class="compass-strip" id="compass-ticks"></div>
+                <div class="compass-marker"></div>
+            </div>
+        </div>
+
+        <!-- TOP LEFT: Bio Readings -->
+        <div class="corner-data top-left">
+            <div><span class="data-label">LIGHT</span></div>
+            <div class="data-value"><span id="lux-level">--</span> Lx</div>
+            <div style="margin-top: 5px;"><span class="data-label">EMF</span></div>
+            <div class="data-value"><span id="emf-level">--</span> μT</div>
+            <div class="hazard-container">
+                <div class="data-label">EXPOSURE</div>
+                <div class="hazard-track">
+                    <div class="hazard-fill" id="hazard-bar"></div>
+                </div>
+                <div style="font-size: 12px; margin-top: 2px;"><span id="hazard-level">SAFE</span></div>
+            </div>
+        </div>
+
+        <!-- TOP RIGHT: Tactical -->
+        <div class="corner-data top-right">
+            <div><span class="data-label">ALTITUDE</span></div>
+            <div class="data-value"><span id="altitude-val">--</span>m</div>
+            <div style="margin-top: 5px;"><span class="data-label">SPEED</span></div>
+            <div class="data-value"><span id="speed-val">0</span> km/h</div>
+            <div style="margin-top: 5px;"><span class="data-label">G-FORCE</span></div>
+            <div class="data-value"><span id="g-force">1.0</span>G</div>
+        </div>
+
+        <!-- CENTER: Reticle & Rangefinder -->
+        <div class="reticle-center">
+            <div class="reticle-crosshair"></div>
+        </div>
+        
+        <div class="rangefinder-fixed" id="target-data" style="display: none;">
+            <div class="rf-label">TARGET</div>
+            <div class="rf-target" id="target-name">---</div>
+            <div class="rf-label">RANGE</div>
+            <div class="rf-value"><span id="target-dist">--</span>m</div>
+            <div class="rf-label" style="color: #ffcc00;">CONF: <span id="target-conf">--</span>%</div>
+        </div>
+
+        <!-- BOTTOM LEFT: Power -->
+        <div class="corner-data bottom-left">
+            <div><span class="data-label">SYSTEM PWR</span></div>
+            <div class="data-value" id="battery-level">--%</div>
+        </div>
+
+        <!-- BOTTOM CENTER: Equalizer -->
+        <div class="voice-footer" id="voice-viz">
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+            <div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div><div class="eq-bar"></div>
+        </div>
+
+    </div>
+    
+    <!-- AR Scene -->
+    <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false;" vr-mode-ui="enabled: false">
+        <a-entity camera></a-entity>
+    </a-scene>
+
+    <script src="game_logic.js"></script>
 </body>
 </html>
