@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-ar-v15';
+const CACHE_NAME = 'iron-ar-v19';
 const urlsToCache = [
   './',
   './index.html',

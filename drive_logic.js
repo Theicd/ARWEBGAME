@@ -509,62 +509,96 @@ document.addEventListener('DOMContentLoaded', () => {
     
     async function initOCR() {
         try {
-            ocrWorker = await Tesseract.createWorker('eng');
-            addAlert('OCR מוכן לזיהוי תמרורים', 'success');
+            ocrWorker = await Tesseract.createWorker('eng', 1, {
+                logger: m => console.log('OCR:', m.status, m.progress)
+            });
+            // Set to recognize only digits
+            await ocrWorker.setParameters({
+                tessedit_char_whitelist: '0123456789',
+            });
+            addAlert('OCR מוכן לזיהוי מספרים', 'success');
+            console.log('OCR Worker ready');
         } catch (e) {
             console.warn('OCR init failed:', e);
+            addAlert('שגיאת OCR', 'danger');
         }
     }
     
     // Called when COCO-SSD detects a sign - read speed from it
     async function readSpeedFromSign(bbox) {
-        if (!ocrWorker || isOcrBusy) return;
-        if (Date.now() - lastOcrTime < OCR_INTERVAL) return;
+        if (!ocrWorker) {
+            console.log('OCR not ready for sign reading');
+            return;
+        }
+        if (isOcrBusy) return;
+        if (Date.now() - lastOcrTime < 1000) return; // 1 second cooldown
         
         lastOcrTime = Date.now();
         isOcrBusy = true;
         
         try {
             const [x, y, w, h] = bbox;
+            console.log('📷 Reading sign at:', x, y, w, h);
             
-            // Create canvas with sign region
+            // Create larger canvas for better OCR (scale up)
+            const scale = 2;
             const signCanvas = document.createElement('canvas');
-            signCanvas.width = w;
-            signCanvas.height = h;
+            signCanvas.width = w * scale;
+            signCanvas.height = h * scale;
             const signCtx = signCanvas.getContext('2d');
-            signCtx.drawImage(cameraFeed, x, y, w, h, 0, 0, w, h);
             
-            // Enhance for better OCR
-            enhanceForOCR(signCtx, w, h);
+            // White background
+            signCtx.fillStyle = '#ffffff';
+            signCtx.fillRect(0, 0, signCanvas.width, signCanvas.height);
+            
+            // Draw sign scaled up
+            signCtx.drawImage(cameraFeed, x, y, w, h, 0, 0, w * scale, h * scale);
+            
+            // Convert to high contrast for number reading
+            const imageData = signCtx.getImageData(0, 0, signCanvas.width, signCanvas.height);
+            const data = imageData.data;
+            
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i], g = data[i+1], b = data[i+2];
+                const gray = (r + g + b) / 3;
+                // Make dark pixels black, light pixels white
+                const val = gray < 120 ? 0 : 255;
+                data[i] = data[i+1] = data[i+2] = val;
+            }
+            signCtx.putImageData(imageData, 0, 0);
             
             // Run OCR
             const result = await ocrWorker.recognize(signCanvas);
-            const text = result.data.text.trim();
+            let text = result.data.text.replace(/[^0-9]/g, '');
             
-            console.log('OCR detected:', text);
+            console.log('🔢 OCR result:', result.data.text, '-> digits:', text);
+            addAlert(`זוהה: "${text}"`, 'info');
             
-            // Look for speed numbers
-            const speedMatch = text.match(/(20|30|40|50|60|70|80|90|100|110|120)/);
-            if (speedMatch) {
-                const detectedSpeed = parseInt(speedMatch[1]);
-                if (detectedSpeed !== currentSpeedLimit) {
-                    currentSpeedLimit = detectedSpeed;
-                    speedLimit.textContent = currentSpeedLimit;
-                    addAlert(`🚸 מהירות מותרת: ${currentSpeedLimit} קמ"ש`, 'warning');
-                    
-                    if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-                    
-                    // Highlight the sign
-                    ctx.strokeStyle = '#00ff00';
-                    ctx.lineWidth = 5;
-                    ctx.strokeRect(x, y, w, h);
-                    ctx.fillStyle = '#00ff00';
-                    ctx.font = 'bold 24px Arial';
-                    ctx.fillText(`${currentSpeedLimit} קמ"ש`, x, y - 15);
+            // Look for valid speed numbers
+            const validSpeeds = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120];
+            for (const speed of validSpeeds) {
+                if (text.includes(speed.toString())) {
+                    if (speed !== currentSpeedLimit) {
+                        currentSpeedLimit = speed;
+                        speedLimit.textContent = currentSpeedLimit;
+                        addAlert(`🚸 מהירות: ${currentSpeedLimit} קמ"ש`, 'warning');
+                        
+                        if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+                        
+                        // Green highlight
+                        ctx.strokeStyle = '#00ff00';
+                        ctx.lineWidth = 5;
+                        ctx.strokeRect(x, y, w, h);
+                        ctx.fillStyle = '#00ff00';
+                        ctx.font = 'bold 28px Arial';
+                        ctx.fillText(`${speed}`, x + w/2 - 20, y - 10);
+                    }
+                    break;
                 }
             }
         } catch (e) {
             console.warn('Sign OCR error:', e);
+            addAlert('שגיאת קריאה', 'danger');
         }
         
         isOcrBusy = false;
@@ -721,8 +755,198 @@ document.addEventListener('DOMContentLoaded', () => {
         ctx.fillText('🚸 ' + currentSpeedLimit, region.x, region.y - 10);
     }
     
-    // Run OCR detection in detection loop
-    setInterval(detectSpeedSigns, OCR_INTERVAL);
+    // --- Speed Limit Sign Detection ---
+    // Uses Hough Circle detection approach + OCR for numbers
+    async function scanForSpeedSigns() {
+        if (!ocrWorker) {
+            console.log('OCR not ready yet');
+            return;
+        }
+        if (!cameraFeed || cameraFeed.readyState < 2) return;
+        if (isOcrBusy) return;
+        
+        isOcrBusy = true;
+        console.log('🔍 Scanning for speed signs...');
+        
+        try {
+            const vw = cameraFeed.videoWidth || 640;
+            const vh = cameraFeed.videoHeight || 480;
+            
+            // Create canvas for frame capture
+            const frameCanvas = document.createElement('canvas');
+            frameCanvas.width = vw;
+            frameCanvas.height = vh;
+            const frameCtx = frameCanvas.getContext('2d');
+            frameCtx.drawImage(cameraFeed, 0, 0, vw, vh);
+            
+            // Find red circular signs
+            const signs = findRedCircleSigns(frameCtx, vw, vh);
+            console.log('Found signs:', signs.length);
+            
+            if (signs.length > 0) {
+                addAlert(`נמצאו ${signs.length} תמרורים`, 'info');
+            }
+            
+            for (const sign of signs) {
+                // Extract just the inner white area (where numbers are)
+                const padding = sign.radius * 0.2;
+                const innerSize = sign.radius * 1.4;
+                const sx = Math.max(0, sign.cx - innerSize/2);
+                const sy = Math.max(0, sign.cy - innerSize/2);
+                
+                const ocrCanvas = document.createElement('canvas');
+                ocrCanvas.width = 150;
+                ocrCanvas.height = 150;
+                const ocrCtx = ocrCanvas.getContext('2d');
+                
+                // Draw and scale up for better OCR
+                ocrCtx.fillStyle = '#ffffff';
+                ocrCtx.fillRect(0, 0, 150, 150);
+                ocrCtx.drawImage(frameCanvas, sx, sy, innerSize, innerSize, 10, 10, 130, 130);
+                
+                // Convert to high contrast black on white
+                prepareForNumberOCR(ocrCtx, 150, 150);
+                
+                // OCR - whitelist already set in init
+                const result = await ocrWorker.recognize(ocrCanvas);
+                
+                let text = result.data.text.replace(/[^0-9]/g, '');
+                console.log('🚸 Sign OCR:', result.data.text, '-> numbers:', text);
+                addAlert(`OCR: "${text}"`, 'info');
+                
+                // Match valid speed limits
+                const validSpeeds = [20, 30, 40, 50, 60, 70, 80, 90, 100, 110, 120];
+                let foundSpeed = null;
+                
+                for (const speed of validSpeeds) {
+                    if (text.includes(speed.toString())) {
+                        foundSpeed = speed;
+                        break;
+                    }
+                }
+                
+                if (foundSpeed && foundSpeed !== currentSpeedLimit) {
+                    currentSpeedLimit = foundSpeed;
+                    speedLimit.textContent = currentSpeedLimit;
+                    addAlert(`🚸 מהירות מותרת: ${currentSpeedLimit} קמ"ש`, 'warning');
+                    
+                    if (navigator.vibrate) navigator.vibrate([150, 50, 150]);
+                    
+                    // Visual feedback
+                    ctx.strokeStyle = '#00ff00';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.arc(sign.cx, sign.cy, sign.radius, 0, Math.PI * 2);
+                    ctx.stroke();
+                    ctx.fillStyle = '#00ff00';
+                    ctx.font = 'bold 24px Arial';
+                    ctx.fillText(`${foundSpeed}`, sign.cx - 20, sign.cy - sign.radius - 10);
+                    
+                    break;
+                }
+            }
+        } catch (e) {
+            console.warn('Speed scan error:', e);
+        }
+        
+        isOcrBusy = false;
+    }
+    
+    function findRedCircleSigns(ctx, w, h) {
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        const signs = [];
+        
+        // Create red mask
+        const redMask = new Uint8Array(w * h);
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            // Detect red (works for various lighting)
+            const isRed = r > 100 && r > g * 1.3 && r > b * 1.3;
+            redMask[i/4] = isRed ? 1 : 0;
+        }
+        
+        // Find clusters of red pixels (potential sign borders)
+        const visited = new Uint8Array(w * h);
+        const minSize = 20, maxSize = 200;
+        
+        for (let y = 0; y < h; y += 10) {
+            for (let x = 0; x < w; x += 10) {
+                const idx = y * w + x;
+                if (redMask[idx] && !visited[idx]) {
+                    // Flood fill to find connected red region
+                    const region = floodFill(redMask, visited, w, h, x, y);
+                    
+                    if (region.count > 50) {
+                        // Calculate bounding box
+                        const cx = (region.minX + region.maxX) / 2;
+                        const cy = (region.minY + region.maxY) / 2;
+                        const radius = Math.max(region.maxX - region.minX, region.maxY - region.minY) / 2;
+                        
+                        if (radius > minSize && radius < maxSize) {
+                            // Check if center is white (sign interior)
+                            const centerIdx = (Math.floor(cy) * w + Math.floor(cx)) * 4;
+                            const cr = data[centerIdx], cg = data[centerIdx+1], cb = data[centerIdx+2];
+                            
+                            if (cr > 150 && cg > 150 && cb > 150) {
+                                signs.push({ cx, cy, radius, score: region.count });
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Sort by size (larger = closer = more important)
+        signs.sort((a, b) => b.radius - a.radius);
+        return signs.slice(0, 3);
+    }
+    
+    function floodFill(mask, visited, w, h, startX, startY) {
+        const stack = [[startX, startY]];
+        const region = { minX: startX, maxX: startX, minY: startY, maxY: startY, count: 0 };
+        
+        while (stack.length > 0 && region.count < 5000) {
+            const [x, y] = stack.pop();
+            if (x < 0 || x >= w || y < 0 || y >= h) continue;
+            
+            const idx = y * w + x;
+            if (visited[idx] || !mask[idx]) continue;
+            
+            visited[idx] = 1;
+            region.count++;
+            region.minX = Math.min(region.minX, x);
+            region.maxX = Math.max(region.maxX, x);
+            region.minY = Math.min(region.minY, y);
+            region.maxY = Math.max(region.maxY, y);
+            
+            stack.push([x+1, y], [x-1, y], [x, y+1], [x, y-1]);
+        }
+        
+        return region;
+    }
+    
+    function prepareForNumberOCR(ctx, w, h) {
+        const imageData = ctx.getImageData(0, 0, w, h);
+        const data = imageData.data;
+        
+        for (let i = 0; i < data.length; i += 4) {
+            const r = data[i], g = data[i+1], b = data[i+2];
+            const gray = (r + g + b) / 3;
+            
+            // High contrast: black numbers on white background
+            // Numbers on speed signs are black/dark
+            const isBlack = gray < 100;
+            const val = isBlack ? 0 : 255;
+            
+            data[i] = data[i+1] = data[i+2] = val;
+        }
+        
+        ctx.putImageData(imageData, 0, 0);
+    }
+    
+    // Run speed sign scan every 1.5 seconds
+    setInterval(scanForSpeedSigns, 1500);
     
     // --- Start ---
     bootSequence();
