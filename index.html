@@ -69,11 +69,18 @@
             <div class="data-value"><span id="g-force">1.0</span>G</div>
         </div>
 
-        <!-- CENTER: Reticle & Rangefinder -->
+        <!-- CENTER: Reticle & Always-On Rangefinder -->
         <div class="reticle-center">
             <div class="reticle-crosshair"></div>
         </div>
         
+        <!-- Always visible distance display -->
+        <div id="center-range" style="position: absolute; top: calc(50% + 40px); left: 50%; transform: translateX(-50%); text-align: center; font-family: Consolas; pointer-events: none;">
+            <div style="font-size: 10px; color: #00ffff; opacity: 0.7;">RANGE</div>
+            <div id="live-distance" style="font-size: 20px; font-weight: bold; color: #fff; text-shadow: 0 0 5px #00ffff;">--</div>
+        </div>
+        
+        <!-- Target info panel (appears when scanning/scanned) -->
         <div class="rangefinder-fixed" id="target-data" style="display: none;">
             <div class="rf-label">TARGET</div>
             <div class="rf-target" id="target-name">---</div>

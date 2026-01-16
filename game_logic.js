@@ -77,7 +77,9 @@ window.onload = function() {
     setInterval(updateSystemInfo, 2000);
     updateSystemInfo();
 
-    // --- 3. Sensors: Compass & G-Force ---
+    // --- 3. Sensors: Compass, G-Force & Rangefinder ---
+    let deviceBeta = 90; // Tilt angle for distance estimation
+    
     window.addEventListener('deviceorientation', (event) => {
         if (event.alpha !== null) {
             const heading = Math.round(event.alpha);
@@ -86,7 +88,14 @@ window.onload = function() {
             if(compassStrip) compassStrip.style.transform = `translateX(calc(-50% - ${offset}px))`;
             if(headingVal) headingVal.textContent = heading.toString().padStart(3, '0');
         }
+        // Save beta (tilt) for distance calculation
+        if (event.beta !== null) {
+            deviceBeta = event.beta;
+        }
     });
+    
+    // Export deviceBeta for rangefinder
+    window.getDeviceBeta = () => deviceBeta;
 
     window.addEventListener('devicemotion', (event) => {
         if(event.accelerationIncludingGravity) {
@@ -245,15 +254,63 @@ window.onload = function() {
     
     document.body.addEventListener('click', setupAudioVisualizer, { once: true });
 
-    // --- 7. AI Detection with Bounding Boxes ---
+    // --- 7. AI Detection with Stable Tracking & Sound ---
     let aiModel = null;
-    let detectedObjects = [];
-    let currentLockedObj = null;
+    let trackedObjects = new Map(); // Stable tracking
+    let currentLockedId = null;
     let isScanning = false;
     let scanComplete = false;
+    let lastScanTime = 0;
     
     const detectionCanvas = document.getElementById('detection-canvas');
     const ctx = detectionCanvas ? detectionCanvas.getContext('2d') : null;
+
+    // Audio Context for sounds
+    let audioCtx = null;
+    function initAudio() {
+        if (!audioCtx) {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+    }
+    
+    function playSound(type) {
+        if (!audioCtx) return;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        
+        switch(type) {
+            case 'detect': // New object detected - short blip
+                osc.frequency.value = 800;
+                gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+                gain.gain.exponentialDecayTo && gain.gain.exponentialDecayTo(0.01, audioCtx.currentTime + 0.1);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.1);
+                break;
+            case 'lock': // Reticle locked - rising tone
+                osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+                osc.frequency.linearRampToValueAtTime(800, audioCtx.currentTime + 0.2);
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.3);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.3);
+                break;
+            case 'scan': // Scanning - pulsing beep
+                osc.frequency.value = 600;
+                osc.type = 'square';
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.15);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+                break;
+            case 'identified': // Object identified - success chord
+                osc.frequency.setValueAtTime(523, audioCtx.currentTime); // C5
+                osc.frequency.setValueAtTime(659, audioCtx.currentTime + 0.1); // E5
+                osc.frequency.setValueAtTime(784, audioCtx.currentTime + 0.2); // G5
+                gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+                gain.gain.linearRampToValueAtTime(0, audioCtx.currentTime + 0.4);
+                osc.start(); osc.stop(audioCtx.currentTime + 0.4);
+                break;
+        }
+    }
 
     function resizeCanvas() {
         if (detectionCanvas) {
@@ -263,6 +320,9 @@ window.onload = function() {
     }
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
+
+    // Initialize audio on first click
+    document.body.addEventListener('click', initAudio, { once: true });
 
     async function loadAI() {
         if (typeof cocoSsd !== 'undefined') {
@@ -276,101 +336,249 @@ window.onload = function() {
         }
     }
 
+    // Generate unique ID for tracking
+    function getObjectId(obj, scale, offsetX, offsetY) {
+        const cx = Math.round((obj.bbox[0] + obj.bbox[2]/2) * scale + offsetX);
+        const cy = Math.round((obj.bbox[1] + obj.bbox[3]/2) * scale + offsetY);
+        return `${obj.class}_${Math.round(cx/50)}_${Math.round(cy/50)}`;
+    }
+
     async function detectLoop() {
         const video = document.querySelector('video');
         if (video && aiModel && video.readyState === 4) {
             try {
                 const predictions = await aiModel.detect(video);
-                detectedObjects = predictions.filter(p => p.score > 0.4);
-                drawDetectionBoxes(video);
-                checkReticleFocus(video);
+                const filtered = predictions.filter(p => p.score > 0.4);
+                
+                const scaleX = window.innerWidth / video.videoWidth;
+                const scaleY = window.innerHeight / video.videoHeight;
+                const scale = Math.max(scaleX, scaleY);
+                const offsetX = (window.innerWidth - video.videoWidth * scale) / 2;
+                const offsetY = (window.innerHeight - video.videoHeight * scale) / 2;
+                
+                updateTrackedObjects(filtered, scale, offsetX, offsetY);
+                drawDetectionBoxes(scale, offsetX, offsetY);
+                checkReticleFocus(scale, offsetX, offsetY);
             } catch(e) {}
         }
         requestAnimationFrame(detectLoop);
     }
 
-    function drawDetectionBoxes(video) {
-        if (!ctx) return;
-        ctx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+    function updateTrackedObjects(newDetections, scale, offsetX, offsetY) {
+        const currentTime = Date.now();
+        const newIds = new Set();
         
-        const scaleX = window.innerWidth / video.videoWidth;
-        const scaleY = window.innerHeight / video.videoHeight;
-        const scale = Math.max(scaleX, scaleY);
-        const offsetX = (window.innerWidth - video.videoWidth * scale) / 2;
-        const offsetY = (window.innerHeight - video.videoHeight * scale) / 2;
-
-        for (let obj of detectedObjects) {
-            const x = obj.bbox[0] * scale + offsetX;
-            const y = obj.bbox[1] * scale + offsetY;
-            const w = obj.bbox[2] * scale;
-            const h = obj.bbox[3] * scale;
+        for (let obj of newDetections) {
+            const id = getObjectId(obj, scale, offsetX, offsetY);
+            newIds.add(id);
             
-            const isLocked = currentLockedObj && obj === currentLockedObj;
-            
-            ctx.strokeStyle = isLocked ? '#ff0000' : '#00ffff';
-            ctx.lineWidth = isLocked ? 3 : 2;
-            ctx.setLineDash(isLocked ? [] : [5, 5]);
-            
-            // Draw corners only (tactical style)
-            const cornerLen = Math.min(w, h) * 0.2;
-            ctx.beginPath();
-            // Top-left
-            ctx.moveTo(x, y + cornerLen); ctx.lineTo(x, y); ctx.lineTo(x + cornerLen, y);
-            // Top-right
-            ctx.moveTo(x + w - cornerLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cornerLen);
-            // Bottom-right
-            ctx.moveTo(x + w, y + h - cornerLen); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w - cornerLen, y + h);
-            // Bottom-left
-            ctx.moveTo(x + cornerLen, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + h - cornerLen);
-            ctx.stroke();
-            
-            // Draw "?" label for unscanned objects
-            if (!isLocked) {
-                ctx.fillStyle = 'rgba(0, 255, 255, 0.7)';
-                ctx.font = '12px Consolas';
-                ctx.fillText('?', x + 5, y + 15);
+            if (trackedObjects.has(id)) {
+                // Update existing - smooth interpolation
+                const tracked = trackedObjects.get(id);
+                const smoothing = 0.3;
+                tracked.x = tracked.x + (obj.bbox[0] * scale + offsetX - tracked.x) * smoothing;
+                tracked.y = tracked.y + (obj.bbox[1] * scale + offsetY - tracked.y) * smoothing;
+                tracked.w = tracked.w + (obj.bbox[2] * scale - tracked.w) * smoothing;
+                tracked.h = tracked.h + (obj.bbox[3] * scale - tracked.h) * smoothing;
+                tracked.score = obj.score;
+                tracked.class = obj.class;
+                tracked.lastSeen = currentTime;
+            } else {
+                // New object detected!
+                trackedObjects.set(id, {
+                    id: id,
+                    x: obj.bbox[0] * scale + offsetX,
+                    y: obj.bbox[1] * scale + offsetY,
+                    w: obj.bbox[2] * scale,
+                    h: obj.bbox[3] * scale,
+                    score: obj.score,
+                    class: obj.class,
+                    lastSeen: currentTime,
+                    scanned: false
+                });
+                playSound('detect');
+            }
+        }
+        
+        // Remove old objects (not seen for 500ms)
+        for (let [id, obj] of trackedObjects) {
+            if (currentTime - obj.lastSeen > 500) {
+                trackedObjects.delete(id);
+                if (currentLockedId === id) {
+                    currentLockedId = null;
+                    isScanning = false;
+                    if(targetData) targetData.style.display = 'none';
+                }
             }
         }
     }
 
-    function checkReticleFocus(video) {
+    function drawDetectionBoxes(scale, offsetX, offsetY) {
+        if (!ctx) return;
+        ctx.clearRect(0, 0, detectionCanvas.width, detectionCanvas.height);
+
+        for (let [id, obj] of trackedObjects) {
+            const x = obj.x, y = obj.y, w = obj.w, h = obj.h;
+            const isLocked = currentLockedId === id;
+            const isScanned = obj.scanned;
+            
+            // Color based on state
+            if (isLocked) {
+                ctx.strokeStyle = isScanned ? '#00ff00' : '#ff0000';
+                ctx.lineWidth = 3;
+                ctx.setLineDash([]);
+            } else if (isScanned) {
+                ctx.strokeStyle = '#00ff00';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([]);
+            } else {
+                ctx.strokeStyle = '#00ffff';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([8, 4]);
+            }
+            
+            // Draw tactical corners
+            const cornerLen = Math.min(w, h) * 0.25;
+            ctx.beginPath();
+            ctx.moveTo(x, y + cornerLen); ctx.lineTo(x, y); ctx.lineTo(x + cornerLen, y);
+            ctx.moveTo(x + w - cornerLen, y); ctx.lineTo(x + w, y); ctx.lineTo(x + w, y + cornerLen);
+            ctx.moveTo(x + w, y + h - cornerLen); ctx.lineTo(x + w, y + h); ctx.lineTo(x + w - cornerLen, y + h);
+            ctx.moveTo(x + cornerLen, y + h); ctx.lineTo(x, y + h); ctx.lineTo(x, y + h - cornerLen);
+            ctx.stroke();
+            
+            // Draw info on the box itself
+            ctx.setLineDash([]);
+            
+            if (isScanned) {
+                // Scanned object - show full info ON the box
+                ctx.fillStyle = '#00ff00';
+                ctx.font = 'bold 14px Consolas';
+                ctx.fillText(obj.class.toUpperCase(), x + 5, y - 25);
+                
+                ctx.font = '12px Consolas';
+                ctx.fillStyle = '#ffffff';
+                ctx.fillText(`${obj.scanDist}m`, x + 5, y - 10);
+                
+                ctx.fillStyle = 'rgba(0, 255, 0, 0.6)';
+                ctx.font = '10px Consolas';
+                ctx.fillText(`${obj.scanConf}%`, x + w - 30, y - 10);
+            } else if (isLocked) {
+                // Currently scanning - show scanning indicator
+                ctx.fillStyle = '#ff0000';
+                ctx.font = 'bold 14px Consolas';
+                ctx.fillText('SCANNING...', x + 5, y - 10);
+            } else {
+                // Unscanned - show ?
+                ctx.fillStyle = 'rgba(0, 255, 255, 0.8)';
+                ctx.font = 'bold 14px Consolas';
+                ctx.fillText('[ ? ]', x + 5, y - 10);
+            }
+        }
+        
+        // Always draw center distance (even to walls)
+        drawCenterRangefinder();
+    }
+    
+    const liveDistanceEl = document.getElementById('live-distance');
+    
+    function drawCenterRangefinder() {
         const cx = window.innerWidth / 2;
         const cy = window.innerHeight / 2;
-        let newLockedObj = null;
+        
+        // Check if pointing at any object
+        let distText = '--';
+        let isOnObject = false;
+        let distColor = '#ffffff';
+        
+        for (let [id, obj] of trackedObjects) {
+            if (cx > obj.x && cx < obj.x + obj.w && cy > obj.y && cy < obj.y + obj.h) {
+                const heightPercent = obj.h / window.innerHeight;
+                const dist = (1.5 / heightPercent).toFixed(1);
+                distText = dist + 'm';
+                isOnObject = true;
+                distColor = obj.scanned ? '#00ff00' : '#ff0000';
+                break;
+            }
+        }
+        
+        // If not on object - estimate distance using device tilt (beta)
+        if (!isOnObject) {
+            const beta = window.getDeviceBeta ? window.getDeviceBeta() : 90;
+            // beta: 0=flat face up, 90=vertical, 180=flat face down
+            // Convert tilt to estimated distance (looking down = closer, looking up = farther)
+            // When phone is vertical (beta ~90), looking straight ahead
+            // When tilting down (beta > 90), looking at floor = closer
+            // When tilting up (beta < 90), looking at ceiling/far = farther
+            
+            let estimatedDist;
+            if (beta > 120) {
+                // Looking at floor - very close
+                estimatedDist = (0.5 + (180 - beta) * 0.03).toFixed(1);
+            } else if (beta > 90) {
+                // Looking slightly down - medium distance
+                estimatedDist = (1.0 + (120 - beta) * 0.1).toFixed(1);
+            } else if (beta > 60) {
+                // Looking straight or slightly up - far
+                estimatedDist = (4.0 + (90 - beta) * 0.15).toFixed(1);
+            } else {
+                // Looking up at ceiling - very far
+                estimatedDist = (8.0 + (60 - beta) * 0.2).toFixed(1);
+            }
+            
+            distText = estimatedDist + 'm';
+            distColor = '#00ffff';
+        }
+        
+        // Update the always-visible rangefinder
+        if (liveDistanceEl) {
+            liveDistanceEl.textContent = distText;
+            liveDistanceEl.style.color = distColor;
+        }
+    }
 
-        const scaleX = window.innerWidth / video.videoWidth;
-        const scaleY = window.innerHeight / video.videoHeight;
-        const scale = Math.max(scaleX, scaleY);
-        const offsetX = (window.innerWidth - video.videoWidth * scale) / 2;
-        const offsetY = (window.innerHeight - video.videoHeight * scale) / 2;
+    function checkReticleFocus(scale, offsetX, offsetY) {
+        const cx = window.innerWidth / 2;
+        const cy = window.innerHeight / 2;
+        let newLockedId = null;
 
-        for (let obj of detectedObjects) {
-            const x = obj.bbox[0] * scale + offsetX;
-            const y = obj.bbox[1] * scale + offsetY;
-            const w = obj.bbox[2] * scale;
-            const h = obj.bbox[3] * scale;
-
-            if (cx > x && cx < x + w && cy > y && cy < y + h) {
-                newLockedObj = obj;
+        for (let [id, obj] of trackedObjects) {
+            if (cx > obj.x && cx < obj.x + obj.w && cy > obj.y && cy < obj.y + obj.h) {
+                newLockedId = id;
                 break;
             }
         }
 
-        // Object changed - reset scan
-        if (newLockedObj !== currentLockedObj) {
-            currentLockedObj = newLockedObj;
+        // Check if still on the SAME object (even if ID changed due to movement)
+        let stillOnSameObject = false;
+        if (currentLockedId && newLockedId) {
+            const currentObj = trackedObjects.get(currentLockedId);
+            const newObj = trackedObjects.get(newLockedId);
+            if (currentObj && newObj && currentObj.class === newObj.class) {
+                // Same class and reticle is still inside - consider it the same object
+                stillOnSameObject = true;
+                // Update the locked ID to the new one but don't reset scan
+                currentLockedId = newLockedId;
+            }
+        }
+
+        if (!stillOnSameObject && newLockedId !== currentLockedId) {
+            currentLockedId = newLockedId;
             isScanning = false;
             scanComplete = false;
             
-            if (newLockedObj && !isScanning) {
-                startScan(newLockedObj, scale);
+            if (newLockedId) {
+                startScan(newLockedId);
             } else {
                 if(targetData) targetData.style.display = 'none';
             }
         }
     }
 
-    function startScan(obj, scale) {
+    let scanInterval = null;
+    function startScan(objId) {
+        const obj = trackedObjects.get(objId);
+        if (!obj) return;
+        
         isScanning = true;
         if(targetData) targetData.style.display = 'flex';
         if(targetName) {
@@ -380,31 +588,51 @@ window.onload = function() {
         if(targetDist) targetDist.textContent = '--';
         if(targetConf) targetConf.textContent = '--';
         
-        // Vibrate on lock
+        playSound('lock');
         if (navigator.vibrate) navigator.vibrate(50);
         
-        // Reveal info after 1.5 seconds
+        // Pulsing scan sound
+        let scanCount = 0;
+        if (scanInterval) clearInterval(scanInterval);
+        scanInterval = setInterval(() => {
+            if (currentLockedId !== objId || scanCount >= 4) {
+                clearInterval(scanInterval);
+                return;
+            }
+            playSound('scan');
+            scanCount++;
+        }, 350);
+        
+        // Reveal after 1.5s
         setTimeout(() => {
-            if (currentLockedObj === obj) {
+            if (currentLockedId === objId) {
+                clearInterval(scanInterval);
                 scanComplete = true;
-                revealObjectInfo(obj, scale);
+                obj.scanned = true;
+                revealObjectInfo(obj);
             }
         }, 1500);
     }
 
-    function revealObjectInfo(obj, scale) {
+    function revealObjectInfo(obj) {
+        playSound('identified');
+        if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
+        
+        // Calculate and SAVE distance/confidence on the object
+        const heightPercent = obj.h / window.innerHeight;
+        const dist = (1.5 / heightPercent).toFixed(1);
+        const conf = Math.round(obj.score * 100);
+        
+        // Store on object so it persists
+        obj.scanDist = dist;
+        obj.scanConf = conf;
+        
         if(targetName) {
             targetName.textContent = obj.class.toUpperCase();
-            targetName.style.color = '#ff3300';
+            targetName.style.color = '#00ff00';
         }
-        
-        const heightPercent = (obj.bbox[3] * scale) / window.innerHeight;
-        const dist = (1.5 / heightPercent).toFixed(1);
         if(targetDist) targetDist.textContent = dist;
-        if(targetConf) targetConf.textContent = Math.round(obj.score * 100);
-        
-        // Vibrate on identification
-        if (navigator.vibrate) navigator.vibrate([50, 50, 100]);
+        if(targetConf) targetConf.textContent = conf;
     }
 
     loadAI();
