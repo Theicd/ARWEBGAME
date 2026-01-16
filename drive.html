@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#000000">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="manifest" href="manifest.json">
+    <title>🚗 Drive Assist HUD</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd"></script>
+    <!-- OCR for reading speed limit signs -->
+    <script src="https://cdn.jsdelivr.net/npm/tesseract.js@4/dist/tesseract.min.js"></script>
+    <link rel="stylesheet" href="drive_style.css">
+</head>
+<body>
+    <!-- Boot Screen -->
+    <div id="boot-screen">
+        <div class="boot-logo">🚗</div>
+        <div class="boot-text">DRIVE ASSIST</div>
+        <div class="boot-status" id="boot-status">INITIALIZING SYSTEMS...</div>
+        <div class="boot-bar"><div class="boot-fill" id="boot-fill"></div></div>
+    </div>
+
+    <!-- Main HUD -->
+    <div id="hud" style="display: none;">
+        
+        <!-- TOP BAR: Speed & Navigation -->
+        <div class="top-bar">
+            <div class="speed-display">
+                <div class="speed-value" id="current-speed">0</div>
+                <div class="speed-unit">km/h</div>
+            </div>
+            <div class="limit-display">
+                <div class="limit-sign" id="speed-limit">--</div>
+                <div class="limit-label">מהירות מותרת</div>
+            </div>
+            <div class="time-display">
+                <div id="current-time">--:--</div>
+                <div id="drive-duration">00:00:00</div>
+            </div>
+        </div>
+
+        <!-- LEFT PANEL: Alerts -->
+        <div class="left-panel">
+            <div class="panel-header">⚠️ התראות</div>
+            <div class="alerts-list" id="alerts-list">
+                <div class="alert-item info">מערכת פעילה</div>
+            </div>
+        </div>
+
+        <!-- CENTER: Camera View + Detection Canvas -->
+        <div class="center-view">
+            <video id="camera-feed" autoplay playsinline></video>
+            <canvas id="detection-canvas"></canvas>
+            
+            <!-- Distance Indicator -->
+            <div class="distance-bar">
+                <div class="dist-label">מרחק מרכב קדימה</div>
+                <div class="dist-indicator">
+                    <div class="dist-fill" id="dist-fill"></div>
+                </div>
+                <div class="dist-value"><span id="front-distance">--</span>m</div>
+            </div>
+            
+            <!-- Lane Indicators -->
+            <div class="lane-left" id="lane-left"></div>
+            <div class="lane-right" id="lane-right"></div>
+        </div>
+
+        <!-- RIGHT PANEL: Detected Objects -->
+        <div class="right-panel">
+            <div class="panel-header">🎯 זיהויים</div>
+            <div class="detections-list" id="detections-list">
+                <div class="detection-item">ממתין לזיהוי...</div>
+            </div>
+        </div>
+
+        <!-- BOTTOM BAR: Vehicle Status -->
+        <div class="bottom-bar">
+            <div class="status-item">
+                <div class="status-icon" id="lights-icon">💡</div>
+                <div class="status-label">אורות</div>
+                <div class="status-value" id="lights-status">AUTO</div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon">🌡️</div>
+                <div class="status-label">תאורה</div>
+                <div class="status-value" id="ambient-light">--</div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon">📍</div>
+                <div class="status-label">גובה</div>
+                <div class="status-value" id="altitude">--m</div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon">🧭</div>
+                <div class="status-label">כיוון</div>
+                <div class="status-value" id="heading">--°</div>
+            </div>
+            <div class="status-item">
+                <div class="status-icon">🔋</div>
+                <div class="status-label">סוללה</div>
+                <div class="status-value" id="battery">--%</div>
+            </div>
+        </div>
+
+        <!-- Warning Overlay -->
+        <div class="warning-overlay" id="warning-overlay" style="display: none;">
+            <div class="warning-icon" id="warning-icon">⚠️</div>
+            <div class="warning-text" id="warning-text">אזהרה!</div>
+        </div>
+
+        <!-- Night Mode Indicator -->
+        <div class="night-mode-indicator" id="night-indicator" style="display: none;">
+            🌙 מצב לילה פעיל
+        </div>
+
+    </div>
+
+    <script src="drive_logic.js"></script>
+</body>
+</html>

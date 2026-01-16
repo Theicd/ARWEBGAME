@@ -1,9 +1,12 @@
-const CACHE_NAME = 'iron-ar-v12';
+const CACHE_NAME = 'iron-ar-v15';
 const urlsToCache = [
   './',
   './index.html',
   './style.css',
   './game_logic.js',
+  './drive.html',
+  './drive_style.css',
+  './drive_logic.js',
   './manifest.json'
 ];
 
